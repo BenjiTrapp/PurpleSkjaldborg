@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skjaldborg — Threat Modeling</title>
+<style>
+/* ============================================================
+   Skjaldborg — Purple-Team Threat Modeling Studio
+   Self-contained. Zero dependencies. Raccoon-flavoured.
+   Design system inherited from RaccoonIR.
+   ============================================================ */
+:root{
+  --bg-0:#0a0a0f;
+  --bg-1:#0d0d12;
+  --bg-2:#16161e;
+  --bg-3:#1e1e2a;
+  --bg-4:#252533;
+  --txt-0:#e0e0ec;
+  --txt-1:#8888a8;
+  --txt-2:#555570;
+  --accent:#a855f7;
+  --accent-hi:#c084fc;
+  --accent-lo:#7c3aed;
+  --cyan:#38bdf8;
+  --cyan-hi:#7dd3fc;
+  --border:#2a2a3a;
+  --border-hi:#3a3a50;
+  --ok:#22c55e;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  /* boundary semantics */
+  --offense:#ef4444;       /* attack vectors / MITRE ATT&CK */
+  --offense-glow:#ff6b6b;
+  --trust:#38bdf8;         /* trust boundary / MITRE D3FEND – force field */
+  --trust-glow:#7dd3fc;
+  --privacy:#22c55e;       /* data protection / PII */
+  --privacy-glow:#4ade80;
+  --mono:'JetBrains Mono','Fira Code','Cascadia Code','SF Mono',Consolas,'Courier New',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--txt-0);
+  background:var(--bg-1);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:var(--bg-1)}
+::-webkit-scrollbar-thumb{background:var(--bg-4);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-hi)}
+
+/* ---------- App shell ---------- */
+#app{display:grid;grid-template-columns:236px 1fr;height:100vh;width:100vw}
+
+/* ---------- Sidebar ---------- */
+#sidebar{
+  background:var(--bg-0);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.brand{
+  display:flex;align-items:center;gap:10px;
+  padding:16px 16px 14px;
+  border-bottom:1px solid var(--border);
+}
+.brand .logo{width:30px;height:30px;flex:0 0 auto}
+.brand h1{font-size:16px;font-weight:700;letter-spacing:.5px;color:var(--txt-0)}
+.brand h1 span{color:var(--accent)}
+.brand .tag{font-size:9px;color:var(--txt-2);letter-spacing:1px;text-transform:uppercase}
+.side-scroll{flex:1;overflow-y:auto;padding:10px 10px 30px}
+.side-group{margin-bottom:6px}
+.side-label{
+  font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--txt-2);padding:12px 8px 6px;font-weight:600;
+  display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+}
+.side-label:hover{color:var(--txt-1)}
+.side-label .caret{font-size:7px;width:9px;display:inline-block;transition:.15s;color:var(--txt-2)}
+.side-label.collapsed .caret{transform:rotate(-90deg)}
+.side-label .grp-count{margin-left:auto;font-size:9px;letter-spacing:0;background:var(--bg-2);color:var(--txt-2);padding:1px 7px;border-radius:9px;font-weight:600}
+.pal-search{position:sticky;top:0;background:var(--bg-0);padding:2px 2px 8px;z-index:6}
+.pal-search .search-box{margin-bottom:0}
+.pal-empty{color:var(--txt-2);font-size:11px;text-align:center;padding:20px 10px;line-height:1.6}
+.sub-label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+  font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--txt-2);font-weight:600;
+  padding:7px 8px 4px 14px;margin:3px 0 0 4px;border-left:2px solid var(--border)}
+.sub-label:hover{color:var(--accent-hi);border-left-color:var(--accent)}
+.sub-label .caret{font-size:7px;width:9px;display:inline-block;transition:.15s;color:var(--txt-2)}
+.sub-label.collapsed .caret{transform:rotate(-90deg)}
+.sub-items{margin-left:10px;border-left:1px solid var(--border);padding-left:3px}
+.palette-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 9px;margin:2px 0;border-radius:7px;
+  border:1px solid transparent;
+  color:var(--txt-1);font-size:12px;
+  cursor:grab;user-select:none;transition:.12s;
+  position:relative;
+}
+.palette-item:hover{background:var(--bg-2);color:var(--txt-0);border-color:var(--border)}
+.palette-item.armed{background:var(--bg-3);border-color:var(--accent);color:var(--txt-0);
+  box-shadow:0 0 0 1px var(--accent),0 0 14px -4px var(--accent)}
+.palette-item .pi-icon{width:24px;height:24px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.palette-item .pi-icon svg{width:20px;height:20px}
+.palette-item .pi-text{display:flex;flex-direction:column;line-height:1.25;overflow:hidden}
+.palette-item .pi-text small{font-size:9px;color:var(--txt-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.palette-item .dot{position:absolute;right:9px;top:9px;width:6px;height:6px;border-radius:50%}
+
+/* nav items (views) */
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:8px 9px;margin:2px 0;
+  border-radius:7px;color:var(--txt-1);font-size:12px;cursor:pointer;transition:.12s;
+}
+.nav-item:hover{background:var(--bg-2);color:var(--txt-0)}
+.nav-item.active{background:var(--bg-3);color:var(--accent-hi)}
+.nav-item svg{width:16px;height:16px}
+
+/* ---------- Main column ---------- */
+#main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-1)}
+header.topbar{
+  height:64px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,var(--bg-2),var(--bg-1));
+}
+.topbar .ttl h2{font-size:17px;font-weight:700}
+.topbar .ttl p{font-size:11px;color:var(--txt-1);margin-top:2px}
+.topbar .actions{display:flex;align-items:center;gap:8px}
+.tbtn{
+  background:var(--bg-3);border:1px solid var(--border-hi);color:var(--txt-1);
+  padding:7px 12px;border-radius:7px;font-size:11.5px;display:flex;align-items:center;gap:6px;transition:.12s;
+}
+.tbtn:hover{background:var(--bg-4);color:var(--txt-0);border-color:var(--accent)}
+.tbtn svg{width:14px;height:14px}
+.tbtn.primary{background:var(--accent-lo);border-color:var(--accent);color:#fff}
+.tbtn.primary:hover{background:var(--accent)}
+.tbtn.ghost{background:transparent;border-color:transparent}
+.user-chip{display:flex;align-items:center;gap:8px;color:var(--txt-1);font-size:11.5px;padding-left:6px;border-left:1px solid var(--border);margin-left:4px}
+.user-chip .av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:12px}
+
+/* ---------- Canvas region ---------- */
+#stage{flex:1;display:flex;overflow:hidden;position:relative}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg-1)}
+#hint{
+  position:absolute;top:14px;left:50%;transform:translateX(-50%);
+  background:rgba(22,22,30,.85);border:1px solid var(--border);backdrop-filter:blur(6px);
+  padding:8px 16px;border-radius:20px;font-size:11px;color:var(--txt-1);z-index:20;
+  pointer-events:none;transition:opacity .3s;max-width:80%;text-align:center;
+}
+#hint b{color:var(--accent-hi)}
+svg#canvas{width:100%;height:100%;display:block;cursor:default;touch-action:none}
+svg#canvas.connect-mode{cursor:crosshair}
+svg#canvas.panning{cursor:grabbing}
+
+/* node text */
+.node-label{font:600 12px var(--mono);fill:var(--txt-0);text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--bg-1);stroke-width:3px}
+.node-sub{font:10px var(--mono);fill:var(--txt-2);text-anchor:middle;pointer-events:none}
+.node-badge{font:700 9px var(--mono);fill:#fff}
+.edge-label{font:10px var(--mono);fill:var(--txt-1);text-anchor:middle;paint-order:stroke;stroke:var(--bg-1);stroke-width:4px}
+.bnd-label{font:700 11px var(--mono);text-transform:uppercase;letter-spacing:1px}
+
+.node{cursor:grab}
+.node.dragging{cursor:grabbing}
+.node .hit{fill:transparent}
+.flow{cursor:pointer}
+.flow.sel,.node.sel .ring{filter:drop-shadow(0 0 6px var(--accent))}
+
+/* zoom controls */
+.zoom-controls{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:15}
+.zoom-controls button,.minimap-toggle{
+  width:34px;height:34px;border-radius:8px;background:var(--bg-2);border:1px solid var(--border-hi);
+  color:var(--txt-1);font-size:16px;display:flex;align-items:center;justify-content:center;transition:.12s}
+.zoom-controls button:hover{background:var(--bg-3);color:var(--txt-0);border-color:var(--accent)}
+.zoom-lvl{font-size:10px;text-align:center;color:var(--txt-2)}
+
+/* ---------- Properties / inspector ---------- */
+#inspector{
+  width:320px;flex:0 0 auto;background:var(--bg-0);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.insp-tabs{display:flex;border-bottom:1px solid var(--border)}
+.insp-tabs button{
+  flex:1;background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--txt-1);padding:11px 4px;font-size:11px;transition:.12s}
+.insp-tabs button.active{color:var(--accent-hi);border-bottom-color:var(--accent)}
+.insp-tabs button:hover{color:var(--txt-0)}
+.insp-body{flex:1;overflow-y:auto;padding:14px}
+.empty-note{color:var(--txt-2);font-size:11.5px;text-align:center;padding:40px 16px;line-height:1.6}
+.empty-note svg{width:46px;height:46px;opacity:.4;margin-bottom:12px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--txt-2);margin-bottom:5px}
+.field input[type=text],.field textarea,.field select{
+  width:100%;background:var(--bg-2);border:1px solid var(--border-hi);color:var(--txt-0);
+  border-radius:6px;padding:8px 9px;font-family:inherit;font-size:12px;outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:54px}
+.sec-title{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--txt-1);
+  margin:18px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.sec-title .pill{margin-left:auto;font-size:9px;padding:1px 7px;border-radius:10px;background:var(--bg-3);color:var(--txt-2)}
+.chk{display:flex;align-items:flex-start;gap:8px;padding:7px;border-radius:6px;cursor:pointer;font-size:11.5px;transition:.1s}
+.chk:hover{background:var(--bg-2)}
+.chk input{margin-top:2px;accent-color:var(--accent)}
+.chk .ck-txt{flex:1}
+.chk .ck-txt b{color:var(--txt-0)}
+.chk .ck-txt small{display:block;color:var(--txt-2);font-size:10px;margin-top:1px;line-height:1.4}
+.chk .ck-tag{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:700;flex:0 0 auto}
+.tag-S{background:#7c3aed33;color:#c4a5ff}
+.tag-T{background:#0ea5e933;color:#7dd3fc}
+.tag-R{background:#f59e0b33;color:#fcd34d}
+.tag-I{background:#ef444433;color:#fca5a5}
+.tag-D{background:#22c55e33;color:#86efac}
+.tag-E{background:#ec489933;color:#f9a8d4}
+.mini-list{max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;background:var(--bg-1)}
+.mini-list .grp{font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-hi);padding:7px 9px 3px;position:sticky;top:0;background:var(--bg-1)}
+.mtopt{display:flex;gap:8px;align-items:flex-start;padding:6px 9px;font-size:11px;cursor:pointer}
+.mopt:hover,.mtopt:hover{background:var(--bg-2)}
+.mtopt{display:flex;gap:8px;align-items:flex-start;padding:6px 9px;font-size:11px;cursor:pointer}
+.mtopt input{margin-top:2px;accent-color:var(--cyan)}
+.mtopt small{color:var(--txt-2);display:block}
+.mtopt code{color:var(--txt-1);font-size:10px}
+.search-box{width:100%;background:var(--bg-2);border:1px solid var(--border-hi);color:var(--txt-0);
+  border-radius:6px;padding:7px 9px;font-family:inherit;font-size:11px;margin-bottom:6px;outline:none}
+.search-box:focus{border-color:var(--cyan)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.chip{font-size:10px;padding:3px 8px;border-radius:12px;display:flex;align-items:center;gap:5px}
+.chip .x{cursor:pointer;opacity:.6}.chip .x:hover{opacity:1}
+.chip.atk{background:#ef444422;color:#fca5a5;border:1px solid #ef444455}
+.chip.def{background:#38bdf822;color:#7dd3fc;border:1px solid #38bdf855}
+.del-btn{width:100%;margin-top:10px;background:#ef444418;border:1px solid #ef444455;color:#fca5a5;
+  padding:8px;border-radius:7px;font-size:11.5px;transition:.12s}
+.del-btn:hover{background:#ef444433}
+.switch{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:7px;background:var(--bg-2);cursor:pointer}
+.switch .tg{width:36px;height:20px;border-radius:11px;background:var(--bg-4);position:relative;transition:.15s;flex:0 0 auto}
+.switch .tg::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--txt-1);top:3px;left:3px;transition:.15s}
+.switch.on .tg{background:var(--offense)}
+.switch.on .tg::after{left:19px;background:#fff}
+
+/* ---------- Analysis tab ---------- */
+.an-card{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px}
+.an-card h4{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--txt-1);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.an-row{display:flex;justify-content:space-between;font-size:11.5px;padding:4px 0;border-bottom:1px dashed var(--border)}
+.an-row:last-child{border-bottom:none}
+.an-row b{color:var(--txt-0)}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.kpi .k{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.kpi .k .n{font-size:22px;font-weight:700}
+.kpi .k .l{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--txt-2);margin-top:2px}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(5,5,9,.78);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:var(--bg-2);border:1px solid var(--border-hi);border-radius:12px;width:min(860px,92vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 80px -20px #000}
+.modal header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal header h3{font-size:15px;display:flex;align-items:center;gap:9px}
+.modal header .x{background:none;border:none;color:var(--txt-1);font-size:22px;line-height:1}
+.modal header .x:hover{color:var(--txt-0)}
+.modal .mbody{padding:20px;overflow-y:auto}
+.modal .mfoot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.matrix{width:100%;border-collapse:collapse;font-size:11px}
+.matrix th,.matrix td{border:1px solid var(--border);padding:8px;text-align:left;vertical-align:top}
+.matrix th{background:var(--bg-3);color:var(--txt-1);font-size:10px;text-transform:uppercase;letter-spacing:.6px}
+.matrix td .n{color:var(--accent-hi);font-weight:700}
+.matrix .x-mark{color:var(--ok);font-weight:700}
+.matrix .o-mark{color:var(--txt-2)}
+.pasta-stage{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.pasta-stage:last-child{border:none}
+.pasta-num{flex:0 0 auto;width:36px;height:36px;border-radius:50%;background:var(--accent-lo);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.pasta-stage h4{font-size:13px;margin-bottom:3px}
+.pasta-stage p{font-size:11.5px;color:var(--txt-1);line-height:1.5}
+.pasta-stage .map{font-size:10px;color:var(--accent-hi);margin-top:4px}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.legend-card{border:1px solid var(--border);border-radius:9px;padding:14px;background:var(--bg-1)}
+.legend-card h4{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:7px}
+.legend-card p{font-size:11px;color:var(--txt-1);line-height:1.5}
+.swatch{width:14px;height:14px;border-radius:4px;flex:0 0 auto}
+.report pre{white-space:pre-wrap;font-size:11px;color:var(--txt-0);line-height:1.55;background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:14px;max-height:60vh;overflow:auto}
+
+/* toast */
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:var(--bg-3);border:1px solid var(--accent);color:var(--txt-0);padding:10px 18px;border-radius:8px;
+  font-size:12px;z-index:200;transition:.25s;pointer-events:none;box-shadow:0 8px 30px -8px #000}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* keyframes for force field */
+@keyframes ffpulse{0%,100%{opacity:.55}50%{opacity:.9}}
+@keyframes dashmove{to{stroke-dashoffset:-24}}
+@keyframes flowmove{to{stroke-dashoffset:-16}}
+.ff-border{animation:ffpulse 2.4s ease-in-out infinite}
+.flow-anim{stroke-dasharray:5 6;animation:flowmove .8s linear infinite}
+.flow-anim.off{stroke-dasharray:6 5;animation:flowmove .55s linear infinite}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside id="sidebar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" id="raccoon-logo"></svg>
+      <div>
+        <h1>Skjald<span>borg</span></h1>
+        <div class="tag">Purple-Team Threat Modeling</div>
+      </div>
+    </div>
+    <div class="side-scroll" id="palette"><!-- built by JS --></div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <div id="main">
+    <header class="topbar">
+      <div class="ttl">
+        <h2 id="model-title">Threat Model</h2>
+        <p>Drag a component onto the canvas. Wire <b>Data Flows</b>, raise <b>Boundaries</b>, map threats to <b>ATT&CK</b> &amp; <b>D3FEND</b>.</p>
+      </div>
+      <div class="actions">
+        <button class="tbtn" id="btn-stride" title="STRIDE matrix">🛡️ STRIDE</button>
+        <button class="tbtn" id="btn-pasta" title="PASTA stages">🍝 PASTA</button>
+        <button class="tbtn" id="btn-legend" title="Legend">＃ Legend</button>
+        <button class="tbtn" id="btn-report" title="Threat report">📄 Report</button>
+        <button class="tbtn ghost" id="btn-import" title="Import JSON">⬇</button>
+        <button class="tbtn" id="btn-export" title="Export JSON">⬆ Save</button>
+        <button class="tbtn primary" id="btn-sample">✨ Sample</button>
+        <div class="user-chip"><span class="av">🦝</span><span>Benji</span></div>
+      </div>
+    </header>
+
+    <div id="stage">
+      <div id="canvas-wrap">
+        <div id="hint">Tip: click a component in the left toolbox, then click the canvas to place it.</div>
+        <svg id="canvas"></svg>
+        <div class="zoom-controls">
+          <button id="zoom-in">+</button>
+          <div class="zoom-lvl" id="zoom-lvl">100%</div>
+          <button id="zoom-out">−</button>
+          <button id="zoom-fit" title="Fit / reset">⊡</button>
+        </div>
+      </div>
+
+      <!-- INSPECTOR -->
+      <aside id="inspector">
+        <div class="insp-tabs">
+          <button data-itab="props" class="active">Properties</button>
+          <button data-itab="analysis">Analysis</button>
+        </div>
+        <div class="insp-body" id="insp-props"></div>
+        <div class="insp-body" id="insp-analysis" style="display:none"></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <header><h3 id="modal-title"></h3><button class="x" id="modal-close">×</button></header>
+    <div class="mbody" id="modal-body"></div>
+    <div class="mfoot" id="modal-foot"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<input type="file" id="file-input" accept=".json,.skjaldborg" style="display:none">
+
+<script>
+/* =====================================================================
+   DATA: icons, component definitions, STRIDE, PASTA, ATT&CK, D3FEND
+   ===================================================================== */
+
+// --- inline SVG icon paths (drawn inside a node, viewBox 0 0 24 24) ---
+const ICONS = {
+  external:'<path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  process:'<path d="M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2L5 19M19 19l-1.8-1.8M6.8 6.8L5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  store:'<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6M4 6c0 1.7 3.6 3 8 3s8-1.3 8-3M4 11c0 1.7 3.6 3 8 3s8-1.3 8-3M4 16c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  flow:'<path d="M4 12h14M13 6l6 6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  iam:'<path d="M14 8a4 4 0 1 0-4 4M11 12l-7 7v3h3l1-1h2v-2h2l2-2.5M14.5 9.5l1 1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  ad:'<path d="M4 21V8l8-5l8 5v13M4 21h16M9 21v-5h6v5M8 11h.5M11.5 11h.5M15 11h.5M8 14h.5M15 14h.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  cloud:'<path d="M7 18a4 4 0 0 1 0-8a5 5 0 0 1 9.5-1.5A3.5 3.5 0 0 1 17 18H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  k8s:'<path d="M12 2l8.5 4v8L12 22l-8.5-4V6L12 2M12 7a5 5 0 1 0 0 10a5 5 0 0 0 0-10M12 2v5M12 17v5M3.5 6l4.5 3M16 15l4.5 3M20.5 6L16 9M8 15l-4.5 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  docker:'<path d="M3 13h16c0 4-3 6-7 6c-5 0-8-2.5-9-6M5 13V10h3v3M8.5 13V10h3v3M12 13V10h3v3M8.5 9.5V7h3v2.5M12 9.5V7h3v2.5M15.5 13V10h3v3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  vm:'<path d="M3 5h18v11H3zM3 16l-1 3h20l-1-3M8 19v2M16 19v2M9 21h6M6 8h6v5H6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+  // boundaries
+  attack:'<path d="M14 5l5-2l-2 5l-8 8M14 5l-3 3M19 3l-3 3M9 16l-1 1l-3-1l-1-3l1-1M5 19l3-3M3 21l4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  trust:'<path d="M12 2l8 3v6c0 5-3.5 8.5-8 11c-4.5-2.5-8-6-8-11V5l8-3M8 12l3 3l5-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  privacy:'<path d="M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5zM12 14.5v2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  sword:'<path d="M14.5 4.5L19 3l-1.5 4.5l-7.5 7.5M14.5 4.5l-4 4M6 18l3-3M4 20l3.5-3.5M5.5 14.5l4 4" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+  // red team infrastructure
+  c2:'<path d="M12 14v7M8 21h8M12 11.5a1.6 1.6 0 1 0 0-3.2a1.6 1.6 0 0 0 0 3.2M8.7 6.7a5 5 0 0 1 6.6 0M6.4 4.4a8.2 8.2 0 0 1 11.2 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  redirector:'<path d="M4 9h13M14 6l3 3l-3 3M20 15H7M10 12l-3 3l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  payload:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5l8-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+  phishing:'<path d="M15 4v9a4 4 0 1 1-4-4M12.8 5.6L15 4l2.2 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  skull:'<path d="M12 3a7 7 0 0 0-4 12.7V18a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 3M9.5 11.5a1.4 1.4 0 1 0 0-.01M14.5 11.5a1.4 1.4 0 1 0 0-.01M10.5 20v-2.2M13.5 20v-2.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  // blue team defenses
+  edr:'<path d="M12 3l7 2.5v5c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9v-5L12 3M8 12h2l1.5-3l2 5l1.5-2h2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  firewall:'<path d="M4 6h16v12H4zM4 10h16M4 14h16M9 6v4M14 6v4M7 10v4M12 10v4M17 10v4M9 14v4M14 14v4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  waf:'<path d="M12 3l7 2.5v5c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9v-5L12 3M5.5 9.5h13M12 4.5v14M9 6c-1.4 2.4-1.4 7 0 10M15 6c1.4 2.4 1.4 7 0 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  cnapp:'<path d="M7 17a4 4 0 0 1 0-8a5 5 0 0 1 9.5-1.5A3.5 3.5 0 0 1 17 16M12 10.5l3 1.1v2.4c0 1.9-1.3 3-3 3.7c-1.7-.7-3-1.8-3-3.7v-2.4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+  cspm:'<path d="M7 16a4 4 0 0 1 0-8a5 5 0 0 1 9.5-1.5A3.5 3.5 0 0 1 17 16M9.5 12.5l2 2l4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  ndr:'<path d="M12 12L18.5 5.5M12 12a8 8 0 1 0 .01 0M12 12a5 5 0 1 0 .01 0M12 12a2 2 0 1 0 .01 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  siem:'<path d="M4 5h16v14H4zM4 9h16M7 13v3M11 11v5M15 14v2M18 12v4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  asm:'<path d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14M11 7.5v7M7.5 11h7M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  hardening:'<path d="M12 3l7 2.5v5c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9v-5L12 3M13 8l-3.5 4.5H12l-1 3.5l3.5-4.5H11.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  deception:'<path d="M4 7c3-1 5.5-1.2 8-1.2s5 .2 8 1.2c0 5-2 8.2-4.2 8.2c-1.6 0-2-1.6-3.8-1.6s-2.2 1.6-3.8 1.6C6 15.2 4 12 4 7M8.2 10a1 1 0 1 0 0 .01M15.8 10a1 1 0 1 0 0 .01" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  // kubernetes sub-components
+  k8s_cp:'<path d="M12 2.5l8 4.6v9.2L12 21l-8-4.7V7.1L12 2.5M12 9.5a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5M12 7V9.5M12 14.5V17M15.5 11l-2 1M8.5 13l2-1" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  knode:'<path d="M4 5h16v6H4zM4 13h16v6H4zM7.5 8h.01M7.5 16h.01M11 8h5.5M11 16h5.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  pod:'<path d="M12 3l7.5 4.3v8.9L12 21l-7.5-4.8V7.3L12 3M9 10.5h6v6H9z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  k8s_svc:'<path d="M12 3a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 0 0 0-4.4M5 16.6a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 0 0 0-4.4M19 16.6a2.2 2.2 0 1 0 0 4.4a2.2 2.2 0 0 0 0-4.4M12 7.4v3.6M12 11l-5 5.6M12 11l5 5.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  ingress:'<path d="M13 3h6v18h-6M3 12h10M9 8l4 4l-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  sa:'<path d="M12 4a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  secret:'<path d="M8 11a3 3 0 1 0 6 0a3 3 0 0 0-6 0M13.8 11H21M18 11v3M21 11v2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  configmap:'<path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 15.5h6M9 8.5h3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  kyverno:'<path d="M12 3l7 2.5v5c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9v-5L12 3M8.5 11.5l2.5 2.5l4.5-4.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  namespace:'<path d="M9 3H6a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h3M15 3h3a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  netpol:'<path d="M12 3l7 2.5v5c0 4.5-3 7.5-7 9c-4-1.5-7-4.5-7-9v-5L12 3M12 8v8M8 12h8M8 12a1 1 0 1 0 0 .01M16 12a1 1 0 1 0 0 .01" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  // extra components & cloud / storage
+  disk:'<path d="M4 5h16v14H4zM12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6M16.5 7.5h.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  bucket:'<path d="M5 7h14l-1.5 13H6.5zM5 7l1-3h12l1 3M9.5 11v5M14.5 11v5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  vpc:'<path d="M4 5h16v14H4zM8 9a1.5 1.5 0 1 0 0 .01M16 9a1.5 1.5 0 1 0 0 .01M12 15a1.5 1.5 0 1 0 0 .01M8.5 9.6l3 4.4M15.5 9.6l-3 4.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  serverless:'<path d="M7 4h4l6 16M17 4L9 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  queue:'<path d="M4 5h13v4H4zM4 11h13v4H4zM4 17h9v2H4M17 16l3 1.5l-3 1.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  cache:'<path d="M5 6c0-1.5 3-2.6 7-2.6s7 1.1 7 2.6v12c0 1.5-3 2.6-7 2.6s-7-1.1-7-2.6zM5 6c0 1.5 3 2.6 7 2.6s7-1.1 7-2.6M13 8.5l-3 4h3l-1 3.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  webapp:'<path d="M3 5h18v14H3zM3 9h18M6 7h.01M8.5 7h.01M11 7h.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  mobileapp:'<path d="M7 3h10v18H7zM10.5 18h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+  api:'<path d="M9 6L4 12l5 6M15 6l5 6l-5 6M13.5 5l-3 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  crd:'<path d="M5 5h6v2.5a1.6 1.6 0 0 0 3.2 0V5H19v6.3h-2.5a1.6 1.6 0 0 0 0 3.2H19V19h-6v-2.5a1.6 1.6 0 0 0-3.2 0V19H5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'
+};
+
+const COMPONENTS = {
+  external:{label:'External Entity', sub:'client · system · dep', icon:'external', color:'#a855f7', kind:'node', desc:'Clients, other systems, dependencies — outside your control.'},
+  process: {label:'Process',         sub:'dispatcher · validator', icon:'process', color:'#38bdf8', kind:'node', desc:'Architecture-centred functionality, e.g. dispatcher, input validator.'},
+  store:   {label:'Data Store',      sub:'db · file system',      icon:'store',   color:'#22c55e', kind:'node', desc:'Database, file system, cache, object storage.'},
+  flow:    {label:'Data Flow',       sub:'connect two nodes',     icon:'flow',    color:'#c084fc', kind:'edge', desc:'Domain data in motion, e.g. "Login Requests". Click source then target.'},
+  iam:     {label:'IAM',             sub:'identity & access',     icon:'iam',     color:'#f59e0b', kind:'node', desc:'Identity & Access Management — tokens, roles, policies.'},
+  ad:      {label:'Active Directory',sub:'directory service',     icon:'ad',      color:'#60a5fa', kind:'node', desc:'AD / LDAP directory service & domain controllers.'},
+  cloud:   {label:'Cloud',           sub:'aws · azure · gcp',     icon:'cloud',   color:'#38bdf8', kind:'node', desc:'Cloud account / control plane / managed services.'},
+  k8s:     {label:'Kubernetes',      sub:'cluster · api server',  icon:'k8s',     color:'#326ce5', kind:'node', desc:'Kubernetes cluster, API server, workloads.'},
+  docker:  {label:'Docker',          sub:'container · image',     icon:'docker',  color:'#2496ed', kind:'node', desc:'Container runtime, images, registries.'},
+  vm:      {label:'Virtual Machine', sub:'host · guest',          icon:'vm',      color:'#94a3b8', kind:'node', desc:'Virtual machine / hypervisor guest.'},
+  // app patterns (core)
+  webapp:  {label:'Web App',         sub:'SPA · frontend',        icon:'webapp',  color:'#a855f7', kind:'node', desc:'Web application / single-page frontend.'},
+  mobileapp:{label:'Mobile App',     sub:'iOS · Android',         icon:'mobileapp',color:'#c084fc',kind:'node', desc:'Mobile application client.'},
+  api:     {label:'API / Gateway',   sub:'REST · gRPC',           icon:'api',     color:'#38bdf8', kind:'node', desc:'API endpoint / API gateway.'},
+  queue:   {label:'Message Queue',   sub:'kafka · sqs · bus',     icon:'queue',   color:'#f59e0b', kind:'node', desc:'Message queue / event bus / topic.'},
+  cache:   {label:'Cache',           sub:'redis · memcached',     icon:'cache',   color:'#22c55e', kind:'node', desc:'In-memory cache / session store.'},
+  cdn:     {label:'CDN / Edge',      sub:'edge · waf',            icon:'cloud',   color:'#7dd3fc', kind:'node', desc:'Content delivery network / edge.'},
+  // cloud services (infrastructure)
+  bucket:  {label:'Object Storage',  sub:'S3 · Blob · GCS',       icon:'bucket',  color:'#22c55e', kind:'node', desc:'Cloud object storage bucket.'},
+  manageddb:{label:'Managed DB',     sub:'RDS · CosmosDB',        icon:'store',   color:'#34d399', kind:'node', desc:'Managed cloud database service.'},
+  kms:     {label:'KMS / Key Vault', sub:'keys · HSM',            icon:'secret',  color:'#f59e0b', kind:'node', desc:'Cloud key management service / HSM.'},
+  secretsmgr:{label:'Secrets Manager',sub:'cloud secrets',        icon:'secret',  color:'#fbbf24', kind:'node', desc:'Cloud secrets manager / parameter store.'},
+  iamrole: {label:'Cloud IAM Role',  sub:'role · policy',         icon:'iam',     color:'#f97316', kind:'node', desc:'Cloud IAM role / policy / instance profile.'},
+  vpc:     {label:'VPC / VNet',      sub:'network · subnet',      icon:'vpc',     color:'#60a5fa', kind:'node', desc:'Virtual private cloud network / subnet.'},
+  clb:     {label:'Load Balancer',   sub:'ALB · NLB',             icon:'k8s_svc', color:'#38bdf8', kind:'node', desc:'Cloud load balancer.'},
+  serverless:{label:'Function',      sub:'lambda · functions',    icon:'serverless',color:'#fb923c',kind:'node', desc:'Serverless function (Lambda / Cloud Functions).'},
+  // boundaries category
+  attack:  {label:'Attack Vector',   sub:'offensive · ATT&CK',    icon:'attack',  color:'#ef4444', kind:'attack', desc:'Offensive path mapped to MITRE ATT&CK. Turns a flow red with a sword. Click source then target.'},
+  trust:   {label:'Trust Boundary',  sub:'force field · D3FEND',  icon:'trust',   color:'#38bdf8', kind:'boundary', bnd:'trust', desc:'Defensive force field mapped to MITRE D3FEND. Drag to enclose what it protects.'},
+  privacy: {label:'Data Protection', sub:'PII · GDPR',            icon:'privacy', color:'#22c55e', kind:'boundary', bnd:'privacy', desc:'Marks privacy-relevant assets (PII) requiring explicit protection.'},
+
+  // ---- Kubernetes sub-components ----
+  k8s_cp:   {label:'Control Plane',  sub:'api · scheduler',    icon:'k8s_cp',   color:'#326ce5', kind:'node', desc:'Kubernetes control plane (API server, scheduler, controller-manager).'},
+  etcd:     {label:'etcd',           sub:'cluster state',      icon:'store',    color:'#419eda', kind:'node', desc:'etcd key-value store — cluster state & secrets at rest.'},
+  k8s_node: {label:'Node',           sub:'kubelet · worker',   icon:'knode',    color:'#4f86f7', kind:'node', desc:'Worker node / kubelet hosting pods.'},
+  pod:      {label:'Pod',            sub:'workload',           icon:'pod',      color:'#60a5fa', kind:'node', desc:'Pod — one or more containers sharing a network namespace.'},
+  k8s_svc:  {label:'Service',        sub:'clusterIP · LB',     icon:'k8s_svc',  color:'#38bdf8', kind:'node', desc:'Kubernetes Service exposing a set of pods.'},
+  ingress:  {label:'Ingress',        sub:'L7 routing',         icon:'ingress',  color:'#818cf8', kind:'node', desc:'Ingress controller — external L7 routing into the cluster.'},
+  sa:       {label:'Service Account',sub:'identity · token',   icon:'sa',       color:'#a78bfa', kind:'node', desc:'ServiceAccount — pod identity & API token.'},
+  secret:   {label:'Secret',         sub:'credentials',        icon:'secret',   color:'#f59e0b', kind:'node', desc:'Kubernetes Secret — credentials, tokens, keys.'},
+  configmap:{label:'ConfigMap',      sub:'config data',        icon:'configmap',color:'#94a3b8', kind:'node', desc:'ConfigMap — non-secret configuration data.'},
+  kyverno:  {label:'Kyverno',        sub:'admission policy',   icon:'kyverno',  color:'#6366f1', kind:'node', desc:'Kyverno — admission controller / policy-as-code engine.'},
+  crd:      {label:'CRD',            sub:'custom resource',    icon:'crd',      color:'#818cf8', kind:'node', desc:'CustomResourceDefinition — extends the Kubernetes API.'},
+  operator: {label:'Operator',       sub:'controller',         icon:'process',  color:'#6366f1', kind:'node', desc:'Operator / custom controller reconciling CRDs.'},
+  rbac:     {label:'RBAC Role',      sub:'role · binding',     icon:'iam',      color:'#a78bfa', kind:'node', desc:'RBAC Role / ClusterRole & bindings.'},
+  pvc:      {label:'PVC',            sub:'volume claim',       icon:'disk',     color:'#38bdf8', kind:'node', desc:'PersistentVolumeClaim — request for storage (often CSI → cloud).'},
+  pv:       {label:'PersistentVolume',sub:'CSI volume',        icon:'disk',     color:'#4f86f7', kind:'node', desc:'PersistentVolume — actual storage, frequently backed by a cloud disk/bucket.'},
+  storageclass:{label:'StorageClass',sub:'provisioner',        icon:'configmap',color:'#94a3b8', kind:'node', desc:'StorageClass — dynamic provisioner mapping to a cloud backend.'},
+  namespace:{label:'Namespace',      sub:'tenant scope',       icon:'namespace',color:'#6366f1', kind:'boundary', bnd:'namespace', desc:'Kubernetes Namespace — logical isolation scope.'},
+  netpol:   {label:'NetworkPolicy',  sub:'segmentation',       icon:'netpol',   color:'#8b5cf6', kind:'boundary', bnd:'netpol', desc:'NetworkPolicy — pod-level network segmentation boundary.'},
+
+  // ---- Red Team infrastructure (offensive · MITRE ATT&CK) ----
+  c2custom:  {label:'Custom C2',     sub:'bespoke implant',    icon:'c2',         color:'#ef4444', kind:'node', redteam:true, desc:'Custom / bespoke command-and-control framework.'},
+  cobalt:    {label:'Cobalt Strike', sub:'team server',        icon:'c2',         color:'#3b82f6', kind:'node', redteam:true, desc:'Cobalt Strike team server (Beacon C2).'},
+  bruteratel:{label:'Brute Ratel',   sub:'BRc4 · badger',      icon:'c2',         color:'#f97316', kind:'node', redteam:true, desc:'Brute Ratel C4 — Badger C2.'},
+  sliver:    {label:'Sliver',        sub:'implant · mTLS',     icon:'c2',         color:'#14b8a6', kind:'node', redteam:true, desc:'Sliver (BishopFox) cross-platform C2.'},
+  havoc:     {label:'Havoc',         sub:'demon agent',        icon:'c2',         color:'#a855f7', kind:'node', redteam:true, desc:'Havoc framework — Demon agent.'},
+  arachne:   {label:'ArachneC2',     sub:'web C2',             icon:'c2',         color:'#dc2626', kind:'node', redteam:true, desc:'Arachne C2 framework.'},
+  adaptix:   {label:'AdaptixC2',     sub:'extensible C2',      icon:'c2',         color:'#06b6d4', kind:'node', redteam:true, desc:'Adaptix C2 framework.'},
+  redirector:{label:'Redirector',    sub:'proxy · CDN front',  icon:'redirector', color:'#94a3b8', kind:'node', redteam:true, desc:'Traffic redirector (mod_rewrite, socat, CDN/domain fronting) shielding the C2.'},
+  payload:   {label:'Payload Server',sub:'staging · hosting',  icon:'payload',    color:'#fb923c', kind:'node', redteam:true, desc:'Payload / staging server hosting implants & tooling.'},
+  phishing:  {label:'Phishing (generic)',sub:'lure · mail',   icon:'phishing',   color:'#f59e0b', kind:'node', redteam:true, desc:'Generic phishing / initial-access infrastructure (mail, lure pages).'},
+  evilginx:  {label:'EvilGinx2',     sub:'AiTM proxy',         icon:'phishing',   color:'#ef4444', kind:'node', redteam:true, desc:'Evilginx2 — adversary-in-the-middle reverse-proxy phishing, session-cookie theft.'},
+  gophish:   {label:'GoPhish',       sub:'OSS campaigns',      icon:'phishing',   color:'#f97316', kind:'node', redteam:true, desc:'GoPhish — open-source phishing campaign framework.'},
+  tangled:   {label:'Tangled',       sub:'phishing kit',       icon:'phishing',   color:'#fb923c', kind:'node', redteam:true, desc:'Tangled — phishing framework / lure delivery.'},
+  phishingclub:{label:'PhishingClub',sub:'phishing platform',  icon:'phishing',   color:'#fbbf24', kind:'node', redteam:true, desc:'PhishingClub — phishing simulation / delivery platform.'},
+
+  // ---- Blue Team defenses (defensive · MITRE D3FEND) ----
+  edr:       {label:'EDR',           sub:'endpoint · XDR',     icon:'edr',        color:'#38bdf8', kind:'node', blueteam:true, desc:'Endpoint Detection & Response / XDR agent.'},
+  firewall:  {label:'Firewall',      sub:'NGFW · segmentation',icon:'firewall',   color:'#0ea5e9', kind:'node', blueteam:true, desc:'Next-gen firewall / network segmentation.'},
+  waf:       {label:'WAF',           sub:'L7 filtering',       icon:'waf',        color:'#22d3ee', kind:'node', blueteam:true, desc:'Web Application Firewall — L7 filtering.'},
+  cnapp:     {label:'CNAPP',         sub:'cloud workloads',    icon:'cnapp',      color:'#2dd4bf', kind:'node', blueteam:true, desc:'Cloud-Native Application Protection Platform (CWPP+CSPM+CIEM).'},
+  cspm:      {label:'CSPM',          sub:'posture · config',   icon:'cspm',       color:'#34d399', kind:'node', blueteam:true, desc:'Cloud Security Posture Management — misconfig detection.'},
+  ndr:       {label:'NDR',           sub:'network detection',  icon:'ndr',        color:'#60a5fa', kind:'node', blueteam:true, desc:'Network Detection & Response (generic).'},
+  darktrace: {label:'Darktrace',     sub:'AI NDR · NOC',       icon:'ndr',        color:'#5eead4', kind:'node', blueteam:true, desc:'Darktrace — self-learning AI network detection.'},
+  vectra:    {label:'Vectra AI',     sub:'AI NDR · NOC',       icon:'ndr',        color:'#818cf8', kind:'node', blueteam:true, desc:'Vectra AI — network threat detection & response.'},
+  extrahop:  {label:'ExtraHop',      sub:'NDR · packet',       icon:'ndr',        color:'#7dd3fc', kind:'node', blueteam:true, desc:'ExtraHop Reveal(x) — wire-data NDR.'},
+  siem:      {label:'SIEM / SOC',    sub:'logs · correlation', icon:'siem',       color:'#38bdf8', kind:'node', blueteam:true, desc:'SIEM / SOC log analytics & correlation.'},
+  asm:       {label:'ASM',           sub:'attack surface mgmt',icon:'asm',        color:'#22c55e', kind:'node', blueteam:true, desc:'Attack Surface Management — external exposure discovery.'},
+  hardening: {label:'Hardening / ASR',sub:'baseline · ASR',    icon:'hardening',  color:'#4ade80', kind:'node', blueteam:true, desc:'Hardening baselines & Attack Surface Reduction rules (CIS, ASR, least privilege).'},
+  deception: {label:'Deception',     sub:'honeypot · decoy',   icon:'deception',  color:'#a3e635', kind:'node', blueteam:true, desc:'Deception / honeypots / decoy assets & credentials.'},
+  // named defensive products
+  crowdstrike:{label:'CrowdStrike',  sub:'Falcon EDR/XDR',     icon:'edr',        color:'#38bdf8', kind:'node', blueteam:true, desc:'CrowdStrike Falcon — endpoint detection & response.'},
+  sentinelone:{label:'SentinelOne',  sub:'Singularity XDR',    icon:'edr',        color:'#22d3ee', kind:'node', blueteam:true, desc:'SentinelOne — autonomous endpoint protection & response.'},
+  defender:  {label:'Defender XDR',  sub:'Microsoft XDR',      icon:'edr',        color:'#60a5fa', kind:'node', blueteam:true, desc:'Microsoft Defender XDR — endpoint/identity/cloud detection.'},
+  wiz:       {label:'Wiz',           sub:'CNAPP',              icon:'cnapp',      color:'#2dd4bf', kind:'node', blueteam:true, desc:'Wiz — agentless CNAPP / cloud posture & workload security.'},
+  prisma:    {label:'Prisma Cloud',  sub:'CNAPP',              icon:'cnapp',      color:'#34d399', kind:'node', blueteam:true, desc:'Prisma Cloud — cloud-native application protection platform.'},
+
+  // ---- offensive / disposable zones ----
+  redteam:   {label:'Red Team Infra',sub:'offensive perimeter',icon:'skull',      color:'#ef4444', kind:'boundary', bnd:'redteam', desc:'Red Team Infrastructure perimeter — attacker-owned C2, staging & tooling.'},
+  grey:      {label:'Grey Zone',     sub:'disposable hosts',   icon:'redirector', color:'#94a3b8', kind:'boundary', bnd:'grey', desc:'Grey-zone hosting (VPS, CDN, redirectors, compromised infra) fronting the red team estate.'}
+};
+
+// Boundary / zone types — visual + semantic config
+const BND = {
+  trust:  {label:'Trust Boundary',   color:'var(--trust)',   glow:'var(--trust-glow)',   grad:'ff-grad', icon:'trust',      dash:'10 6', anim:true,  inner:true,  mapping:'d3fend', defLabel:'Trust Boundary'},
+  privacy:{label:'Data Protection',  color:'var(--privacy)', glow:'var(--privacy-glow)', grad:'pv-grad', icon:'privacy',    dash:'2 6',  anim:false, inner:false, mapping:'pii',    defLabel:'PII Zone'},
+  redteam:{label:'Red Team Infra',   color:'var(--offense)', glow:'var(--offense-glow)', grad:'rt-grad', icon:'skull',      dash:'8 6',  anim:true,  inner:false, mapping:'attack', defLabel:'Red Team Infrastructure'},
+  grey:   {label:'Grey Zone',        color:'#94a3b8',        glow:'#cbd5e1',             grad:'gr-grad', icon:'redirector', dash:'3 6',  anim:false, inner:false, mapping:'attack', defLabel:'Grey Zone'},
+  namespace:{label:'Namespace',      color:'#6366f1',        glow:'#a5b4fc',             grad:'ns-grad', icon:'namespace',  dash:'4 6',  anim:false, inner:false, mapping:'d3fend', defLabel:'Namespace'},
+  netpol: {label:'NetworkPolicy',    color:'#8b5cf6',        glow:'#c4b5fd',             grad:'np-grad', icon:'netpol',     dash:'7 5',  anim:true,  inner:false, mapping:'d3fend', defLabel:'NetworkPolicy'}
+};
+
+// Default technique mappings pre-filled when an infra/defense node is added
+const NODE_DEFAULTS = {
+  // red team -> ATT&CK
+  cobalt:{a:[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel'],['T1105','Ingress Tool Transfer']]},
+  bruteratel:{a:[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel'],['T1620','Reflective Code Loading']]},
+  sliver:{a:[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel'],['T1219','Remote Access Software']]},
+  havoc:{a:[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel'],['T1055','Process Injection']]},
+  arachne:{a:[['T1071','Application Layer Protocol'],['T1102','Web Service']]},
+  adaptix:{a:[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel']]},
+  c2custom:{a:[['T1071','Application Layer Protocol'],['T1095','Non-Application Layer Protocol'],['T1008','Fallback Channels']]},
+  redirector:{a:[['T1090','Proxy'],['T1102','Web Service'],['T1568','Dynamic Resolution']]},
+  payload:{a:[['T1608','Stage Capabilities'],['T1105','Ingress Tool Transfer'],['T1588','Obtain Capabilities']]},
+  phishing:{a:[['T1566','Phishing'],['T1598','Phishing for Information'],['T1585','Establish Accounts']]},
+  evilginx:{a:[['T1557','Adversary-in-the-Middle'],['T1539','Steal Web Session Cookie'],['T1566','Phishing']]},
+  gophish:{a:[['T1566','Phishing'],['T1598','Phishing for Information']]},
+  tangled:{a:[['T1566','Phishing'],['T1585','Establish Accounts']]},
+  phishingclub:{a:[['T1566','Phishing'],['T1585','Establish Accounts']]},
+  // blue team -> D3FEND
+  edr:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-PT','Process Termination']]},
+  crowdstrike:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-PT','Process Termination']]},
+  sentinelone:{d:[['D3-PA','Process Analysis'],['D3-PT','Process Termination']]},
+  defender:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-UBA','User Behavior Analysis']]},
+  wiz:{d:[['D3-PH','Platform Hardening'],['D3-ACH','Application Config Hardening'],['D3-AI','Asset Inventory']]},
+  prisma:{d:[['D3-PH','Platform Hardening'],['D3-EI','Execution Isolation']]},
+  firewall:{d:[['D3-NI','Network Isolation'],['D3-BSE','Broadcast Domain Isolation'],['D3-NTA','Network Traffic Analysis']]},
+  waf:{d:[['D3-ACH','Application Config Hardening'],['D3-NTA','Network Traffic Analysis']]},
+  cnapp:{d:[['D3-PH','Platform Hardening'],['D3-EI','Execution Isolation'],['D3-RTSD','Resource Access Pattern Analysis']]},
+  cspm:{d:[['D3-ACH','Application Config Hardening'],['D3-AI','Asset Inventory']]},
+  ndr:{d:[['D3-NTA','Network Traffic Analysis'],['D3-NM','Network Mapping']]},
+  darktrace:{d:[['D3-NTA','Network Traffic Analysis'],['D3-UBA','User Behavior Analysis']]},
+  vectra:{d:[['D3-NTA','Network Traffic Analysis'],['D3-UBA','User Behavior Analysis']]},
+  extrahop:{d:[['D3-NTA','Network Traffic Analysis'],['D3-RTSD','Resource Access Pattern Analysis']]},
+  siem:{d:[['D3-UBA','User Behavior Analysis'],['D3-PA','Process Analysis'],['D3-FA','File Analysis']]},
+  asm:{d:[['D3-AI','Asset Inventory'],['D3-NM','Network Mapping'],['D3-DAM','Data Inventory Mapping']]},
+  hardening:{d:[['D3-PH','Platform Hardening'],['D3-ACH','Application Config Hardening'],['D3-CH','Credential Hardening']]},
+  deception:{d:[['D3-DO','Decoy Object'],['D3-DUC','Decoy User Credential'],['D3-DNR','Decoy Network Resource']]}
+};
+function nodeDefaults(type){
+  const d=NODE_DEFAULTS[type]||{};
+  return {attack:(d.a||[]).map(([id,name])=>({id,name})), d3fend:(d.d||[]).map(([id,name])=>({id,name}))};
+}
+
+// STRIDE definitions + applicability per element type
+const STRIDE = [
+  {k:'S', name:'Spoofing', prop:'Authentication', def:'Pretending to be someone or something you are not.', mit:'MFA, mutual TLS, strong session identity.'},
+  {k:'T', name:'Tampering', prop:'Integrity', def:'Unauthorised modification of data or code.', mit:'Encryption in transit, digital signatures, integrity checks.'},
+  {k:'R', name:'Repudiation', prop:'Non-repudiation', def:'Denying performed actions without proof.', mit:'Tamper-evident audit logs, signed events.'},
+  {k:'I', name:'Information Disclosure', prop:'Confidentiality', def:'Exposing sensitive data to unauthorised parties.', mit:'Least privilege, encryption, response filtering.'},
+  {k:'D', name:'Denial of Service', prop:'Availability', def:'Exhausting resources to deny legitimate access.', mit:'Rate limiting, quotas, input validation.'},
+  {k:'E', name:'Elevation of Privilege', prop:'Authorization', def:'Performing actions beyond your authorised scope.', mit:'Least privilege, sandboxing, authZ checks.'}
+];
+// which STRIDE letters apply to which element type
+const STRIDE_APPLIES = {
+  external:['S','R','I','D'],
+  process:['S','T','R','I','D','E'],
+  store:['T','R','I','D'],
+  flow:['T','I','D'],
+  iam:['S','T','R','I','D','E'],
+  ad:['S','T','R','I','D','E'],
+  cloud:['S','T','R','I','D','E'],
+  k8s:['S','T','R','I','D','E'],
+  docker:['T','I','D','E'],
+  vm:['S','T','R','I','D','E'],
+  k8s_cp:['S','T','R','I','D','E'],
+  etcd:['T','R','I','D'],
+  k8s_node:['S','T','R','I','D','E'],
+  pod:['S','T','R','I','D','E'],
+  k8s_svc:['S','T','I','D'],
+  ingress:['S','T','I','D'],
+  sa:['S','R','I','E'],
+  secret:['T','R','I','D'],
+  configmap:['T','I','D'],
+  kyverno:['T','R','I','D','E']
+};
+
+const PASTA = [
+  {n:1,t:'Define Objectives',d:'Business & security objectives, compliance drivers, risk appetite.',m:'Scopes the model — which assets matter and why.'},
+  {n:2,t:'Define Technical Scope',d:'Enumerate the architecture: components, infra, dependencies, network.',m:'Your canvas nodes (External, Process, Store, IAM, Cloud, K8s…).'},
+  {n:3,t:'Application Decomposition',d:'Map data flows, entry/exit points, trust levels, assets.',m:'Data Flows + Boundaries on the canvas.'},
+  {n:4,t:'Threat Analysis',d:'Threat intelligence: who attacks this, with what TTPs.',m:'Attack Vectors mapped to MITRE ATT&CK.'},
+  {n:5,t:'Vulnerability Analysis',d:'Correlate weaknesses with threats; map to STRIDE categories.',m:'Per-node STRIDE assessment.'},
+  {n:6,t:'Attack Modeling',d:'Build attack trees / scenarios; simulate adversary paths.',m:'Offensive flows + ATT&CK technique chains.'},
+  {n:7,t:'Risk & Impact / Countermeasures',d:'Prioritise risk, select countermeasures.',m:'Trust Boundaries (D3FEND) + Data Protection (PII).'}
+];
+
+// Compact MITRE ATT&CK Enterprise subset (tactic -> techniques)
+const ATTACK = {
+  'Reconnaissance':[['T1595','Active Scanning'],['T1590','Gather Victim Network Info'],['T1598','Phishing for Information'],['T1589','Gather Victim Identity Info']],
+  'Resource Development':[['T1583','Acquire Infrastructure'],['T1584','Compromise Infrastructure'],['T1587','Develop Capabilities'],['T1588','Obtain Capabilities'],['T1608','Stage Capabilities'],['T1585','Establish Accounts']],
+  'Initial Access':[['T1190','Exploit Public-Facing Application'],['T1133','External Remote Services'],['T1566','Phishing'],['T1078','Valid Accounts'],['T1195','Supply Chain Compromise']],
+  'Execution':[['T1059','Command & Scripting Interpreter'],['T1610','Deploy Container'],['T1204','User Execution'],['T1053','Scheduled Task/Job']],
+  'Persistence':[['T1136','Create Account'],['T1098','Account Manipulation'],['T1525','Implant Internal Image'],['T1505','Server Software Component']],
+  'Privilege Escalation':[['T1068','Exploitation for Priv. Escalation'],['T1611','Escape to Host'],['T1548','Abuse Elevation Control'],['T1078.004','Cloud Accounts']],
+  'Defense Evasion':[['T1070','Indicator Removal'],['T1562','Impair Defenses'],['T1036','Masquerading'],['T1550','Use Alternate Auth Material']],
+  'Credential Access':[['T1110','Brute Force'],['T1003','OS Credential Dumping'],['T1552','Unsecured Credentials'],['T1558','Steal/Forge Kerberos Tickets'],['T1528','Steal App Access Token'],['T1557','Adversary-in-the-Middle'],['T1539','Steal Web Session Cookie']],
+  'Discovery':[['T1046','Network Service Discovery'],['T1087','Account Discovery'],['T1613','Container & Resource Discovery'],['T1526','Cloud Service Discovery']],
+  'Lateral Movement':[['T1021','Remote Services'],['T1550','Use Alternate Auth Material'],['T1080','Taint Shared Content']],
+  'Collection':[['T1213','Data from Info Repositories'],['T1530','Data from Cloud Storage'],['T1119','Automated Collection']],
+  'Command & Control':[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel'],['T1105','Ingress Tool Transfer'],['T1090','Proxy'],['T1102','Web Service'],['T1572','Protocol Tunneling'],['T1568','Dynamic Resolution'],['T1095','Non-Application Layer Protocol'],['T1219','Remote Access Software'],['T1008','Fallback Channels']],
+  'Exfiltration':[['T1041','Exfil over C2 Channel'],['T1567','Exfil over Web Service'],['T1048','Exfil over Alt Protocol']],
+  'Impact':[['T1486','Data Encrypted for Impact'],['T1485','Data Destruction'],['T1498','Network DoS'],['T1496','Resource Hijacking']]
+};
+
+// Compact MITRE D3FEND subset (defensive tactic -> techniques)
+const D3FEND = {
+  'Harden':[['D3-MFA','Multi-factor Authentication'],['D3-CH','Credential Hardening'],['D3-ACH','Application Config Hardening'],['D3-PH','Platform Hardening']],
+  'Detect':[['D3-NTA','Network Traffic Analysis'],['D3-PA','Process Analysis'],['D3-UBA','User Behavior Analysis'],['D3-FA','File Analysis'],['D3-RTSD','Resource Access Pattern Analysis']],
+  'Isolate':[['D3-NI','Network Isolation'],['D3-EI','Execution Isolation'],['D3-BSE','Broadcast Domain Isolation'],['D3-ET','Encrypted Tunnels']],
+  'Deceive':[['D3-DUC','Decoy User Credential'],['D3-DO','Decoy Object'],['D3-DNR','Decoy Network Resource']],
+  'Evict':[['D3-AL','Account Locking'],['D3-PT','Process Termination'],['D3-CR','Credential Revoking']],
+  'Model':[['D3-AI','Asset Inventory'],['D3-NM','Network Mapping'],['D3-DAM','Data Inventory Mapping']]
+};
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+let state = {nodes:[], edges:[], boundaries:[], seq:1};
+let view = {x:0, y:0, k:1};
+let armed = null;            // currently armed palette tool key
+let selected = null;         // {type:'node'|'edge'|'boundary', id}
+let connectFrom = null;      // node id when drawing flow/attack
+let inspTab = 'props';
+const SVGNS='http://www.w3.org/2000/svg';
+const canvas = document.getElementById('canvas');
+const wrap = document.getElementById('canvas-wrap');
+
+const uid = p => p+(state.seq++);
+const byId = (arr,id)=>arr.find(o=>o.id===id);
+
+/* =====================================================================
+   RACCOON LOGO (inline)
+   ===================================================================== */
+document.getElementById('raccoon-logo').innerHTML = `
+  <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>
+  <path d="M24 4C14 4 6 10 6 22c0 9 7 18 18 22 11-4 18-13 18-22C42 10 34 4 24 4z" fill="url(#rg)" opacity=".18"/>
+  <path d="M10 16c2-4 5-6 5-6M38 16c-2-4-5-6-5-6" stroke="#c084fc" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M24 12c-7 0-12 5-12 12 0 7 5 13 12 16 7-3 12-9 12-16 0-7-5-12-12-12z" fill="#1e1e2a" stroke="#a855f7" stroke-width="1.6"/>
+  <path d="M24 16c-4 0-8 1-8 1l3 6h10l3-6s-4-1-8-1z" fill="#0d0d12"/>
+  <ellipse cx="18.5" cy="23" rx="3" ry="3.4" fill="#0d0d12"/><ellipse cx="29.5" cy="23" rx="3" ry="3.4" fill="#0d0d12"/>
+  <circle cx="18.5" cy="22.5" r="1.5" fill="#c084fc"/><circle cx="29.5" cy="22.5" r="1.5" fill="#c084fc"/>
+  <path d="M24 27l-2.5 2.5h5L24 27z" fill="#a855f7"/>
+  <path d="M21 33c1 1.2 5 1.2 6 0" stroke="#8888a8" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+
+/* =====================================================================
+   PALETTE (sidebar)
+   ===================================================================== */
+function iconSvg(key,color,size=20){
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="color:${color}">${ICONS[key]}</svg>`;
+}
+const PGROUPS = [
+  {label:'Core Components', items:['external','process','store','flow'], subs:[
+    {label:'App Patterns', items:['webapp','mobileapp','api','queue','cache','cdn']}
+  ]},
+  {label:'Infrastructure', items:['iam','ad','cloud','k8s','docker','vm'], subs:[
+    {label:'Cloud Services', items:['bucket','manageddb','kms','secretsmgr','iamrole','vpc','clb','serverless']}
+  ]},
+  {label:'Kubernetes', subs:[
+    {label:'Control Plane', items:['k8s_cp','etcd','crd','operator']},
+    {label:'Workloads', items:['k8s_node','pod']},
+    {label:'Networking', items:['k8s_svc','ingress','netpol']},
+    {label:'Config & Identity', items:['configmap','secret','sa','rbac']},
+    {label:'Storage', items:['pvc','pv','storageclass']},
+    {label:'Scope', items:['namespace']}
+  ]},
+  {label:'Boundaries', items:['attack','trust','privacy']},
+  {label:'Red Team Infra', items:['redteam','grey','redirector','payload'], subs:[
+    {label:'C2 Frameworks', items:['cobalt','bruteratel','sliver','havoc','arachne','adaptix','c2custom']},
+    {label:'Phishing Infra', items:['evilginx','gophish','tangled','phishingclub','phishing']}
+  ]},
+  {label:'Blue Team Defense', items:['siem','asm'], subs:[
+    {label:'Endpoint (EDR/XDR)', items:['edr','crowdstrike','sentinelone','defender']},
+    {label:'Network Detection (NDR/NOC)', items:['ndr','darktrace','vectra','extrahop']},
+    {label:'Network Filtering', items:['firewall','waf']},
+    {label:'Cloud Security', items:['cnapp','cspm','wiz','prisma']},
+    {label:'Hardening & Deception', items:['hardening','deception']}
+  ]}
+];
+const collapsed=new Set();
+// subcategories start collapsed
+PGROUPS.forEach(g=>(g.subs||[]).forEach(s=>collapsed.add(g.label+'::'+s.label)));
+const palMatch=(k,f)=>{const c=COMPONENTS[k]; return !!c && (!f || (c.label+' '+c.sub+' '+c.desc).toLowerCase().includes(f));};
+const palItem=k=>{const c=COMPONENTS[k]; return `<div class="palette-item${armed===k?' armed':''}" data-tool="${k}" title="${esc(c.desc)}" draggable="true">
+  <span class="pi-icon">${iconSvg(c.icon,c.color)}</span>
+  <span class="pi-text"><span>${esc(c.label)}</span><small>${esc(c.sub)}</small></span>
+  <span class="dot" style="background:${c.color}"></span></div>`;};
+function buildPalette(){
+  const p=document.getElementById('palette');
+  p.innerHTML=`<div class="pal-search"><input id="pal-q" class="search-box" placeholder="🔍  Search components…" autocomplete="off"></div>
+    <div id="pal-list"></div>
+    <div class="side-group" style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
+      <div class="side-label" style="cursor:default">Views</div>
+      <div class="nav-item" id="nav-stride">${iconSvg('trust','#8888a8',16)}<span>STRIDE Matrix</span></div>
+      <div class="nav-item" id="nav-pasta">🍝&nbsp;<span>PASTA Stages</span></div>
+      <div class="nav-item" id="nav-legend2">＃&nbsp;<span>Legend</span></div>
+      <div class="nav-item" id="nav-clear">🗑️&nbsp;<span>Clear Canvas</span></div>
+    </div>`;
+  document.getElementById('nav-stride').onclick=showStride;
+  document.getElementById('nav-pasta').onclick=showPasta;
+  document.getElementById('nav-legend2').onclick=showLegend;
+  document.getElementById('nav-clear').onclick=clearCanvas;
+  const q=document.getElementById('pal-q');
+  q.addEventListener('input',()=>renderPalette(q.value));
+  q.addEventListener('keydown',e=>{ if(e.key==='Escape'){q.value='';renderPalette('');} });
+  renderPalette('');
+}
+function renderPalette(filter){
+  const f=(filter||'').trim().toLowerCase();
+  const list=document.getElementById('pal-list'); let html='', total=0;
+  PGROUPS.forEach(g=>{
+    const top=(g.items||[]).filter(k=>palMatch(k,f));
+    const subs=(g.subs||[]).map(s=>({label:s.label, key:g.label+'::'+s.label, items:s.items.filter(k=>palMatch(k,f))}));
+    const count=top.length+subs.reduce((a,s)=>a+s.items.length,0);
+    if(f && count===0) return;
+    total+=count;
+    const gCol=!f&&collapsed.has(g.label);
+    html+=`<div class="side-group"><div class="side-label${gCol?' collapsed':''}" data-grp="${g.label}">
+      <span class="caret">▼</span><span>${g.label}</span><span class="grp-count">${count}</span></div>`;
+    if(!gCol){
+      top.forEach(k=>html+=palItem(k));
+      subs.forEach(s=>{
+        if(f && !s.items.length) return;
+        const sCol=!f&&collapsed.has(s.key);
+        html+=`<div class="sub-label${sCol?' collapsed':''}" data-sub="${s.key}">
+          <span class="caret">▼</span><span>${s.label}</span><span class="grp-count">${s.items.length}</span></div>`;
+        if(!sCol){html+=`<div class="sub-items">`; s.items.forEach(k=>html+=palItem(k)); html+=`</div>`;}
+      });
+    }
+    html+='</div>';
+  });
+  list.innerHTML = total?html:`<div class="pal-empty">No components match “${esc(f)}”.</div>`;
+  list.querySelectorAll('.palette-item').forEach(el=>{
+    const tool=el.dataset.tool;
+    el.addEventListener('click',()=>armTool(tool));
+    el.addEventListener('dragstart',e=>{e.dataTransfer.setData('tool',tool);armed=tool;});
+  });
+  const req=()=>renderPalette(document.getElementById('pal-q').value);
+  list.querySelectorAll('[data-grp]').forEach(el=>el.addEventListener('click',()=>{
+    const l=el.dataset.grp; collapsed.has(l)?collapsed.delete(l):collapsed.add(l); req();}));
+  list.querySelectorAll('[data-sub]').forEach(el=>el.addEventListener('click',()=>{
+    const l=el.dataset.sub; collapsed.has(l)?collapsed.delete(l):collapsed.add(l); req();}));
+}
+
+function armTool(tool){
+  if(armed===tool){disarm();return;}
+  armed=tool; connectFrom=null;
+  document.querySelectorAll('.palette-item').forEach(el=>el.classList.toggle('armed',el.dataset.tool===tool));
+  const c=COMPONENTS[tool];
+  canvas.classList.toggle('connect-mode', c.kind==='edge'||c.kind==='attack');
+  if(c.kind==='edge'||c.kind==='attack') showHint(`<b>${c.label}</b>: click the <b>source</b> node, then the <b>target</b> node. Esc to cancel.`);
+  else if(c.kind==='boundary') showHint(`<b>${c.label}</b>: click on the canvas to drop the boundary, then drag/resize it to enclose assets.`);
+  else if(c.blueteam) showHint(`<b>${c.label}</b>: click a <b>node</b> to protect it 🛡️ — or click empty canvas to place it standalone.`);
+  else showHint(`<b>${c.label}</b>: click anywhere on the canvas to place it.`);
+}
+function disarm(){
+  armed=null; connectFrom=null;
+  document.querySelectorAll('.palette-item').forEach(el=>el.classList.remove('armed'));
+  canvas.classList.remove('connect-mode');
+  clearTempLine();
+}
+
+/* =====================================================================
+   CANVAS: defs, grid, viewport
+   ===================================================================== */
+function initCanvas(){
+  canvas.innerHTML=`
+  <defs>
+    <pattern id="grid-s" width="22" height="22" patternUnits="userSpaceOnUse">
+      <path d="M22 0H0V22" fill="none" stroke="#16161e" stroke-width=".7"/></pattern>
+    <pattern id="grid-l" width="110" height="110" patternUnits="userSpaceOnUse">
+      <path d="M110 0H0V110" fill="none" stroke="#1e1e2a" stroke-width="1"/></pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#7dd3fc"/></marker>
+    <marker id="arr-off" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#ef4444"/></marker>
+    <radialGradient id="ff-grad"><stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/>
+      <stop offset="78%" stop-color="#38bdf8" stop-opacity="0"/><stop offset="100%" stop-color="#38bdf8" stop-opacity=".22"/></radialGradient>
+    <radialGradient id="pv-grad"><stop offset="0%" stop-color="#22c55e" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#22c55e" stop-opacity="0"/><stop offset="100%" stop-color="#22c55e" stop-opacity=".18"/></radialGradient>
+    <radialGradient id="rt-grad"><stop offset="0%" stop-color="#ef4444" stop-opacity="0"/>
+      <stop offset="76%" stop-color="#ef4444" stop-opacity="0"/><stop offset="100%" stop-color="#ef4444" stop-opacity=".20"/></radialGradient>
+    <radialGradient id="gr-grad"><stop offset="0%" stop-color="#94a3b8" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#94a3b8" stop-opacity="0"/><stop offset="100%" stop-color="#94a3b8" stop-opacity=".16"/></radialGradient>
+    <radialGradient id="ns-grad"><stop offset="0%" stop-color="#6366f1" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#6366f1" stop-opacity="0"/><stop offset="100%" stop-color="#6366f1" stop-opacity=".16"/></radialGradient>
+    <radialGradient id="np-grad"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0"/>
+      <stop offset="78%" stop-color="#8b5cf6" stop-opacity="0"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity=".18"/></radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect id="bg" x="-100000" y="-100000" width="200000" height="200000" fill="var(--bg-1)"/>
+  <g id="viewport">
+    <rect id="grid-rect-s" x="-100000" y="-100000" width="200000" height="200000" fill="url(#grid-s)"/>
+    <rect id="grid-rect-l" x="-100000" y="-100000" width="200000" height="200000" fill="url(#grid-l)"/>
+    <g id="g-boundaries"></g>
+    <g id="g-edges"></g>
+    <g id="g-temp"></g>
+    <g id="g-nodes"></g>
+  </g>`;
+  applyView();
+}
+function applyView(){
+  document.getElementById('viewport').setAttribute('transform',`translate(${view.x} ${view.y}) scale(${view.k})`);
+  document.getElementById('zoom-lvl').textContent=Math.round(view.k*100)+'%';
+}
+function screenToWorld(cx,cy){
+  const r=canvas.getBoundingClientRect();
+  return {x:(cx-r.left-view.x)/view.k, y:(cy-r.top-view.y)/view.k};
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+const R=34; // node radius
+function nodeAt(id){return byId(state.nodes,id);}
+
+function render(){
+  renderBoundaries(); renderEdges(); renderNodes();
+  renderInspector(); renderAnalysis();
+}
+
+function renderNodes(){
+  const g=document.getElementById('g-nodes'); g.innerHTML='';
+  state.nodes.forEach(n=>{
+    const c=COMPONENTS[n.type];
+    const sel = selected&&selected.type==='node'&&selected.id===n.id;
+    const grp=document.createElementNS(SVGNS,'g');
+    grp.setAttribute('class','node'+(sel?' sel':'')); grp.setAttribute('transform',`translate(${n.x} ${n.y})`);
+    grp.dataset.id=n.id;
+    const rt=c.redteam, bt=c.blueteam;
+    const ctrl=(n.props.controls||[]).length;
+    const accent = rt?'var(--offense)':bt?'var(--trust)':c.color;
+    const badge = rt? n.props.attack.length : bt? n.props.d3fend.length : countNodeThreats(n);
+    const badgeCol = bt?'var(--trust)':'var(--danger)';
+    const pii = n.props.pii;
+    grp.innerHTML=`
+      <circle class="hit" r="${R+22}"/>
+      ${ctrl?`<circle r="${R+13}" fill="none" stroke="var(--trust)" stroke-width="1.5" opacity=".6" stroke-dasharray="7 5" style="animation:dashmove 5s linear infinite"/>`:''}
+      ${(rt||bt)?`<circle r="${R+9}" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".5" stroke-dasharray="3 5" style="animation:dashmove ${rt?3:4}s linear infinite"/>`:''}
+      <circle r="${R+6}" fill="none" stroke="${accent}" stroke-width="1" opacity=".22"/>
+      <circle class="ring" r="${R}" fill="var(--bg-2)" stroke="${c.color}" stroke-width="${sel?2.4:1.6}" filter="url(#glow)"/>
+      <circle r="${R-5}" fill="none" stroke="${c.color}" stroke-width=".8" opacity=".4" stroke-dasharray="2 4"/>
+      <g transform="translate(-13 -13) scale(1.08)" style="color:${c.color}">${ICONS[c.icon]}</g>
+      <text class="node-label" y="${R+18}">${esc(n.label)}</text>
+      <text class="node-sub" y="${R+31}">${c.label}</text>
+      ${badge?`<g transform="translate(${R-6} ${-R+2})"><circle r="9" fill="${badgeCol}"/><text class="node-badge" text-anchor="middle" y="3">${badge}</text></g>`:''}
+      ${rt?`<g transform="translate(${-R+3} ${R-3})"><circle r="8.5" fill="var(--offense)"/><g transform="translate(-5.5 -5.5) scale(.62)">${ICONS.sword}</g></g>`:''}
+      ${bt?`<g transform="translate(${-R+3} ${R-3})"><circle r="8.5" fill="var(--trust)"/><g transform="translate(-6 -6) scale(.5)" style="color:#04222e">${ICONS.trust}</g></g>`:''}
+      ${ctrl&&!rt&&!bt?`<g transform="translate(${-R+3} ${R-3})"><circle r="9" fill="var(--trust)" stroke="var(--bg-1)" stroke-width="1.5"/><g transform="translate(-6.5 -6.5) scale(.54)" style="color:#04222e">${ICONS.trust}</g><text class="node-badge" x="11" y="-5" style="fill:var(--trust-glow)">${ctrl}</text></g>`:''}
+      ${pii&&!rt&&!bt?`<g transform="translate(${-R+4} ${-R+2})"><circle r="9" fill="var(--privacy)"/><g transform="translate(-6 -6) scale(.5)" style="color:#06210f">${ICONS.privacy}</g></g>`:''}
+    `;
+    g.appendChild(grp);
+  });
+}
+
+function edgeGeom(a,b){
+  // shorten to node edges, then bow into a smooth quadratic curve
+  const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy)||1;
+  const ux=dx/len, uy=dy/len;
+  const sx=a.x+ux*(R+3),  sy=a.y+uy*(R+3);
+  const ex=b.x-ux*(R+10), ey=b.y-uy*(R+10);
+  const cdx=ex-sx, cdy=ey-sy, clen=Math.hypot(cdx,cdy)||1;
+  const nx=-cdy/clen, ny=cdx/clen;                 // unit normal
+  const bow=Math.min(58, clen*0.18);               // curvature
+  const cx=sx+cdx*0.5+nx*bow, cy=sy+cdy*0.5+ny*bow;
+  const lx=0.25*sx+0.5*cx+0.25*ex, ly=0.25*sy+0.5*cy+0.25*ey; // point on curve at t=.5
+  return {d:`M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`, lx, ly};
+}
+function renderEdges(){
+  const g=document.getElementById('g-edges'); g.innerHTML='';
+  state.edges.forEach(e=>{
+    const a=nodeAt(e.from), b=nodeAt(e.to); if(!a||!b)return;
+    const p=edgeGeom(a,b);
+    const sel=selected&&selected.type==='edge'&&selected.id===e.id;
+    const off=e.offensive;
+    const col=off?'var(--offense)':'var(--cyan)';
+    const grp=document.createElementNS(SVGNS,'g'); grp.setAttribute('class','flow'+(sel?' sel':'')); grp.dataset.id=e.id;
+    grp.innerHTML=`
+      <path d="${p.d}" fill="none" stroke="transparent" stroke-width="16"/>
+      ${off?`<path d="${p.d}" fill="none" stroke="var(--offense-glow)" stroke-width="${sel?5:3.5}" opacity=".25" filter="url(#glow)"/>`:''}
+      <path class="flow-anim${off?' off':''}" d="${p.d}" fill="none"
+            stroke="${col}" stroke-width="${sel?2.6:1.8}" marker-end="url(#${off?'arr-off':'arr'})"/>
+      ${e.label?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly-8).toFixed(1)}" fill="${off?'#fca5a5':'var(--txt-1)'}">${esc(e.label)}</text>`:''}
+      ${off?`<g transform="translate(${(p.lx-11).toFixed(1)} ${(p.ly-11).toFixed(1)})"><circle cx="11" cy="11" r="11" fill="var(--offense)"/><g transform="translate(2 2) scale(.78)">${ICONS.sword}</g></g>`:''}
+    `;
+    g.appendChild(grp);
+  });
+}
+
+function renderBoundaries(){
+  const g=document.getElementById('g-boundaries'); g.innerHTML='';
+  state.boundaries.forEach(b=>{
+    const cfg=BND[b.type]||BND.trust;
+    const sel=selected&&selected.type==='boundary'&&selected.id===b.id;
+    const col=cfg.color, glow=cfg.glow, grad=cfg.grad, rx=14;
+    const animStyle=cfg.anim?'style="animation:dashmove 1.6s linear infinite"':'';
+    const grp=document.createElementNS(SVGNS,'g'); grp.setAttribute('class','boundary'); grp.dataset.id=b.id;
+    grp.innerHTML=`
+      <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="url(#${grad})"/>
+      <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="${col}" opacity=".05"/>
+      ${cfg.inner?`<rect x="${b.x+3}" y="${b.y+3}" width="${b.w-6}" height="${b.h-6}" rx="${rx-2}" fill="none"
+            stroke="${glow}" stroke-width="1.4" opacity=".5" class="ff-border" stroke-dasharray="2 7"/>`:''}
+      <rect class="bnd-hit" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="transparent"
+            stroke="${col}" stroke-width="${sel?2.4:1.8}" stroke-dasharray="${cfg.dash}" ${animStyle}/>
+      <g transform="translate(${b.x+12} ${b.y+10})">
+        <g style="color:${col}" transform="scale(.8)">${ICONS[cfg.icon]}</g>
+        <text class="bnd-label" x="26" y="13" fill="${col}">${esc(b.label)}</text>
+      </g>
+      ${(()=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual);return b.w>=164?`<g transform="translate(${b.x+b.w-126} ${b.y+7})">
+        <rect width="118" height="19" rx="9.5" fill="rgba(8,8,12,.75)" stroke="${col}" stroke-opacity=".35"/>
+        <text x="9" y="13.5" style="font:700 9.5px var(--mono);fill:var(--offense)">A ${sc.A}</text>
+        <text x="45" y="13.5" style="font:700 9.5px var(--mono);fill:var(--trust)">D ${sc.D}</text>
+        <text x="80" y="13.5" style="font:700 9.5px var(--mono);fill:${rk.c}">R ${sc.residual}</text></g>`:''})()}
+      ${sel?`<rect class="bnd-resize" x="${b.x+b.w-9}" y="${b.y+b.h-9}" width="14" height="14" rx="3" fill="${col}" stroke="#000" stroke-width="1"/>`:''}
+    `;
+    g.appendChild(grp);
+  });
+}
+
+function clearTempLine(){document.getElementById('g-temp').innerHTML='';}
+function drawTempLine(x1,y1,x2,y2){
+  const off=COMPONENTS[armed]&&COMPONENTS[armed].kind==='attack';
+  document.getElementById('g-temp').innerHTML=
+   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${off?'var(--offense)':'var(--cyan)'}"
+      stroke-width="2" stroke-dasharray="5 5" opacity=".7" marker-end="url(#${off?'arr-off':'arr'})"/>`;
+}
+
+/* =====================================================================
+   ADD / MUTATE
+   ===================================================================== */
+function addNode(type,x,y){
+  const c=COMPONENTS[type];
+  const dd=nodeDefaults(type);
+  const n={id:uid('n'), type, label:c.label, x:snap(x), y:snap(y),
+    props:{stride:{}, pasta:'', attack:dd.attack, d3fend:dd.d3fend, pii:type==='store', notes:''}};
+  state.nodes.push(n); select('node',n.id); render(); toast(`${c.label} added`);
+  return n;
+}
+function addBoundary(type,x,y){
+  const cfg=BND[type]||BND.trust;
+  const b={id:uid('b'), type, x:snap(x-90), y:snap(y-60), w:220, h:150,
+    label:cfg.defLabel, d3fend:[], attack:[], notes:'', pii:type==='privacy'};
+  state.boundaries.push(b); select('boundary',b.id); render();
+  const msg={trust:'Trust boundary (force field) raised',privacy:'Data protection zone added',
+    redteam:'Red Team Infrastructure zone added ☠',grey:'Grey zone added',
+    namespace:'Namespace added',netpol:'NetworkPolicy segmentation added'};
+  toast(msg[type]||'Boundary added');
+}
+function addEdge(from,to,offensive){
+  if(from===to)return;
+  if(state.edges.some(e=>e.from===from&&e.to===to&&e.offensive===offensive)){toast('Flow already exists');return;}
+  const e={id:uid('e'), from, to, label:'', offensive:!!offensive,
+    props:{stride:{}}, attack:[], notes:''};
+  state.edges.push(e); select('edge',e.id); render();
+  toast(offensive?'Attack vector drawn ⚔':'Data flow connected');
+}
+const snap=v=>Math.round(v/11)*11;
+
+// Apply a defensive control onto an existing node (it "acts on" that tool/entity)
+function applyControl(nodeId, toolType){
+  const n=nodeAt(nodeId); if(!n)return;
+  const c=COMPONENTS[toolType]; if(!c||!c.blueteam)return;
+  n.props.controls=n.props.controls||[];
+  if(n.props.controls.some(x=>x.type===toolType)){toast(`${c.label} already protecting ${n.label}`);return;}
+  n.props.controls.push({type:toolType, label:c.label, d3fend:nodeDefaults(toolType).d3fend});
+  select('node',nodeId); render(); toast(`${c.label} now protecting ${n.label} 🛡️`);
+}
+
+function bbox(nodes,pad){
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  nodes.forEach(n=>{minx=Math.min(minx,n.x);miny=Math.min(miny,n.y);maxx=Math.max(maxx,n.x);maxy=Math.max(maxy,n.y);});
+  return {x:snap(minx-pad), y:snap(miny-pad-12), w:snap(maxx-minx+pad*2), h:snap(maxy-miny+pad*2+34)};
+}
+// Drill-down: blow a Kubernetes node up into its typical sub-components
+function expandK8s(node){
+  if(!node||node.type!=='k8s')return;
+  if(node._expanded){toast('Cluster already expanded');return;}
+  node._expanded=true;
+  const ax=node.x+190, ay=node.y-40;
+  const P=(t,rx,ry)=>addNodeSilent(t,ax+rx,ay+ry);
+  const op=P('operator',0,-140), crd=P('crd',175,-140);
+  const cp=P('k8s_cp',0,0), et=P('etcd',0,110), ky=P('kyverno',0,225);
+  const n1=P('k8s_node',180,-25), n2=P('k8s_node',180,215);
+  const p1=P('pod',345,-55), p2=P('pod',345,70), sa=P('sa',345,205);
+  const sec=P('secret',520,135), svc=P('k8s_svc',520,-25), ing=P('ingress',690,-25);
+  const pvc=P('pvc',520,235);                 // inside namespace
+  const bucket=P('bucket',730,235);           // cloud vendor — outside the namespace (Durchstich)
+  const E=(a,b,l)=>Eadd(a,b,l,false);
+  E(node,cp,'manages'); E(ing,svc,'route'); E(svc,p1,'load balance'); E(svc,p2,'load balance');
+  E(n1,p1,'hosts'); E(n2,p2,'hosts'); E(p1,sa,'uses'); E(p1,sec,'mounts secret');
+  E(sa,cp,'API (token)'); E(ky,cp,'admission webhook'); E(cp,et,'cluster state'); E(n1,cp,'kubelet');
+  E(op,cp,'reconciles'); E(crd,cp,'extends API'); E(op,crd,'watches');
+  E(p1,pvc,'mounts volume'); E(pvc,bucket,'CSI → cloud storage');
+  const ns=bbox([op,crd,cp,et,ky,n1,n2,p1,p2,sa,sec,svc,ing,pvc],60);  // bucket excluded → edge crosses boundary
+  state.boundaries.push({id:uid('b'),type:'namespace',x:ns.x,y:ns.y,w:ns.w,h:ns.h,label:'Namespace: app',d3fend:[{id:'D3-EI',name:'Execution Isolation'}],attack:[],notes:'',pii:false});
+  const np=bbox([p1,p2,sa],46);
+  state.boundaries.push({id:uid('b'),type:'netpol',x:np.x,y:np.y,w:np.w,h:np.h,label:'NetworkPolicy',d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-BSE',name:'Broadcast Domain Isolation'}],attack:[],notes:'default-deny ingress/egress',pii:false});
+  select('node',cp.id); render(); fitView(); toast('Kubernetes cluster expanded ⎈ (with PVC → cloud durchstich)');
+}
+
+/* =====================================================================
+   SELECTION + INSPECTOR
+   ===================================================================== */
+function select(type,id){selected=(type&&id)?{type,id}:null; renderNodes(); renderEdges(); renderBoundaries(); renderInspector();}
+
+function setInspTab(t){
+  inspTab=t;
+  document.querySelectorAll('.insp-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.itab===t));
+  document.getElementById('insp-props').style.display = t==='props'?'block':'none';
+  document.getElementById('insp-analysis').style.display = t==='analysis'?'block':'none';
+  if(t==='analysis')renderAnalysis();
+}
+
+function renderInspector(){
+  const el=document.getElementById('insp-props');
+  if(!selected){
+    el.innerHTML=`<div class="empty-note">${iconSvg('process','#8888a8',46)}<br>
+      Select a node, flow or boundary to inspect & assess it.<br><br>
+      Or pick a component from the toolbox to add one.</div>`;
+    return;
+  }
+  if(selected.type==='node')   el.innerHTML=inspectorNode(nodeAt(selected.id));
+  if(selected.type==='edge')   el.innerHTML=inspectorEdge(byId(state.edges,selected.id));
+  if(selected.type==='boundary')el.innerHTML=inspectorBoundary(byId(state.boundaries,selected.id));
+  wireInspector();
+}
+
+function inspectorNode(n){
+  if(!n)return '';
+  const c=COMPONENTS[n.type];
+  const rt=c.redteam, bt=c.blueteam;
+  const attackSec=`
+    <div class="sec-title">🗡️ MITRE ATT&CK <span class="pill">${n.props.attack.length}</span></div>
+    <p style="font-size:10px;color:var(--txt-2);margin:-4px 2px 6px">${bt?'Adversary techniques this control detects / mitigates.':'Offensive techniques enabled by this asset.'}</p>
+    ${chipBox(n.props.attack,'atk','attack')}
+    <button class="tbtn" style="width:100%;margin-top:6px;justify-content:center" id="pick-attack">+ Map ATT&CK technique</button>`;
+  const d3Sec=`
+    <div class="sec-title">🛡️ MITRE D3FEND <span class="pill">${n.props.d3fend.length}</span></div>
+    <p style="font-size:10px;color:var(--txt-2);margin:-4px 2px 6px">${rt?'Blue-team countermeasures that detect / disrupt this infrastructure.':'Defensive countermeasures applied here.'}</p>
+    ${chipBox(n.props.d3fend,'def','d3fend')}
+    <button class="tbtn" style="width:100%;margin-top:6px;justify-content:center" id="pick-d3fend">+ Map D3FEND countermeasure</button>`;
+
+  let banner='', body='';
+  if(rt){
+    banner=`<div class="an-card" style="border-color:#ef444455;background:#ef44440f"><h4 style="color:#fca5a5">☠ Adversary infrastructure</h4>
+      <p style="font-size:11px;color:var(--txt-1)">Attacker-owned asset. Map the TTPs it enables (ATT&CK) and how the blue team detects it (D3FEND).</p></div>`;
+    body=attackSec+d3Sec;
+  }else if(bt){
+    banner=`<div class="an-card" style="border-color:#38bdf855;background:#38bdf80f"><h4 style="color:#7dd3fc">🛡️ Defensive control</h4>
+      <p style="font-size:11px;color:var(--txt-1)">Protective / detective control. Its D3FEND coverage feeds the offense↔defense score in Analysis.</p></div>`;
+    body=d3Sec+attackSec;
+  }else{
+    const applies=STRIDE_APPLIES[n.type]||['S','T','R','I','D','E'];
+    let stride='';
+    STRIDE.forEach(s=>{
+      if(!applies.includes(s.k))return;
+      const on=n.props.stride[s.k];
+      stride+=`<label class="chk"><input type="checkbox" data-stride="${s.k}" ${on?'checked':''}>
+        <span class="ck-tag tag-${s.k}">${s.k}</span>
+        <span class="ck-txt"><b>${s.name}</b> <small>${s.def}<br><i style="color:var(--ok)">↳ ${s.mit}</i></small></span></label>`;
+    });
+    const controls=n.props.controls||[];
+    const controlsSec=`<div class="sec-title">🛡️ Applied controls <span class="pill">${controls.length}</span></div>
+      ${controls.length?`<div class="chips">${controls.map(ct=>`<span class="chip def" data-rmctrl="${ct.type}">${iconSvg(COMPONENTS[ct.type].icon,'#7dd3fc',12)} ${esc(ct.label)} <span class="x" title="remove">×</span></span>`).join('')}</div>
+        <p style="font-size:10px;color:var(--txt-2);margin-top:5px">D3FEND covered: ${[...new Set(controls.flatMap(ct=>ct.d3fend.map(t=>t.id)))].join(', ')||'—'}</p>`
+        :`<div style="font-size:11px;color:var(--txt-2);padding:2px 2px 4px">Arm a <b style="color:var(--trust)">Blue-Team</b> tool, then click this node to protect it.</div>`}`;
+    body=`<label class="switch ${n.props.pii?'on':''}" id="f-pii" style="--offense:var(--privacy)">
+        <span>🔒 Handles PII / sensitive data</span><span class="tg"></span></label>
+      ${controlsSec}
+      <div class="sec-title">STRIDE assessment <span class="pill">${applies.length} apply</span></div>
+      ${stride}${attackSec}${d3Sec}`;
+  }
+  return `
+    <div class="field"><label>Label</label><input type="text" id="f-label" value="${esc(n.label)}"></div>
+    <div class="field"><label>Component type</label>
+      <div style="display:flex;align-items:center;gap:8px;color:${c.color};font-size:12px">
+        ${iconSvg(c.icon,c.color)} ${c.label}</div></div>
+    ${n.type==='k8s'?`<button class="tbtn primary" id="f-expand" style="width:100%;margin-bottom:12px;justify-content:center" ${n._expanded?'disabled style="opacity:.5"':''}>⎈ ${n._expanded?'Cluster expanded':'Expand into sub-components'}</button>`:''}
+    ${banner}
+    <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Domain context, assumptions…">${esc(n.props.notes||'')}</textarea></div>
+    ${body}
+    <div class="field" style="margin-top:14px"><label>PASTA stage relevance</label>
+      <select id="f-pasta"><option value="">—</option>
+      ${PASTA.map(p=>`<option value="${p.n}" ${n.props.pasta==p.n?'selected':''}>Stage ${p.n}: ${p.t}</option>`).join('')}</select></div>
+
+    <button class="del-btn" id="f-del">Delete node</button>`;
+}
+
+function inspectorEdge(e){
+  if(!e)return '';
+  const a=nodeAt(e.from), b=nodeAt(e.to);
+  return `
+    <div class="field"><label>Data flow label</label><input type="text" id="f-label" value="${esc(e.label)}" placeholder="e.g. Login Requests"></div>
+    <div class="field"><label>Route</label>
+      <div style="font-size:11.5px;color:var(--txt-1)">${a?esc(a.label):'?'} → ${b?esc(b.label):'?'}</div></div>
+    <label class="switch ${e.offensive?'on':''}" id="f-off">
+      <span>⚔️ Attack vector (offensive)</span><span class="tg"></span></label>
+    <p style="font-size:10.5px;color:var(--txt-2);margin:6px 2px 0">Offensive flows turn red, gain a sword, and map to MITRE ATT&CK.</p>
+    <div class="field" style="margin-top:12px"><label>Notes</label><textarea id="f-notes" placeholder="Trust assumption, protocol…">${esc(e.notes||'')}</textarea></div>
+
+    <div class="sec-title">🗡️ MITRE ATT&CK <span class="pill">${e.attack.length}</span></div>
+    ${chipBox(e.attack,'atk','attack')}
+    <button class="tbtn" style="width:100%;margin-top:6px;justify-content:center" id="pick-attack">+ Map ATT&CK technique</button>
+
+    <button class="del-btn" id="f-del">Delete flow</button>`;
+}
+
+function inspectorBoundary(b){
+  if(!b)return '';
+  const cfg=BND[b.type]||BND.trust;
+  b.d3fend=b.d3fend||[]; b.attack=b.attack||[];
+  const typeDesc={trust:'Trust Boundary — force field (D3FEND)',privacy:'Data Protection Zone — PII (GDPR)',
+    redteam:'Red Team Infrastructure — offensive perimeter (ATT&CK)',grey:'Grey Zone — disposable fronting infra (ATT&CK)'}[b.type]||cfg.label;
+  let mapHtml='';
+  if(cfg.mapping==='d3fend'){
+    mapHtml=`<div class="sec-title">🛡️ MITRE D3FEND <span class="pill">${b.d3fend.length}</span></div>
+      ${chipBox(b.d3fend,'def','d3fend')}
+      <button class="tbtn" style="width:100%;margin-top:6px;justify-content:center" id="pick-d3fend">+ Map D3FEND countermeasure</button>`;
+  }else if(cfg.mapping==='attack'){
+    mapHtml=`<div class="sec-title">🗡️ MITRE ATT&CK <span class="pill">${b.attack.length}</span></div>
+      <p style="font-size:10px;color:var(--txt-2);margin:-4px 2px 6px">TTPs operated from this ${b.type==='grey'?'grey-zone':'red-team'} infrastructure.</p>
+      ${chipBox(b.attack,'atk','attack')}
+      <button class="tbtn" style="width:100%;margin-top:6px;justify-content:center" id="pick-attack">+ Map ATT&CK technique</button>`;
+  }else{
+    mapHtml=`<div class="an-card" style="margin-top:14px"><h4>🔒 PII checklist</h4>
+        <label class="chk"><input type="checkbox" disabled> <span class="ck-txt">Data minimisation applied</span></label>
+        <label class="chk"><input type="checkbox" disabled> <span class="ck-txt">Encryption at rest & in transit</span></label>
+        <label class="chk"><input type="checkbox" disabled> <span class="ck-txt">Retention & deletion policy</span></label>
+        <label class="chk"><input type="checkbox" disabled> <span class="ck-txt">Lawful basis documented</span></label>
+        <small style="color:var(--txt-2)">Nodes inside this zone are flagged PII automatically.</small></div>`;
+  }
+  return `
+    <div class="field"><label>Boundary label</label><input type="text" id="f-label" value="${esc(b.label)}"></div>
+    <div class="field"><label>Type</label>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:${cfg.color}">
+        ${iconSvg(cfg.icon,cfg.color)} ${typeDesc}</div></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Purpose of this zone…">${esc(b.notes||'')}</textarea></div>
+    ${(()=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual);return `<div class="an-card">
+      <h4>📊 Attack-tree score <span style="margin-left:auto;color:${rk.c};font-weight:700">${rk.l} risk</span></h4>
+      <div style="font-size:10px;color:var(--txt-2);margin-bottom:2px">${sc.inside} asset(s) · ${sc.off} attack vector(s) inside · controls reduce residual risk</div>
+      ${scoreBar('⚔ Attacker score',sc.A,'var(--offense)')}
+      ${scoreBar('🛡 Defender score',sc.D,'var(--trust)')}
+      ${scoreBar('▲ Residual risk',sc.residual,rk.c)}</div>`;})()}
+    ${mapHtml}
+    <button class="del-btn" id="f-del">Delete boundary</button>`;
+}
+
+function chipBox(list,cls,field){
+  if(!list.length)return `<div style="font-size:11px;color:var(--txt-2);padding:4px 2px">None mapped yet.</div>`;
+  return `<div class="chips">${list.map(t=>`<span class="chip ${cls}" data-rm="${t.id}" data-field="${field}">
+    <code>${t.id}</code> ${esc(t.name)} <span class="x" title="remove">×</span></span>`).join('')}</div>`;
+}
+
+function wireInspector(){
+  const sel=selected; if(!sel)return;
+  const obj = sel.type==='node'?nodeAt(sel.id): sel.type==='edge'?byId(state.edges,sel.id):byId(state.boundaries,sel.id);
+  if(!obj)return;
+  const $=id=>document.getElementById(id);
+  if($('f-label'))$('f-label').oninput=e=>{obj.label=e.target.value; renderNodes(); renderEdges(); renderBoundaries();};
+  if($('f-notes'))$('f-notes').oninput=e=>{ (sel.type==='node'?obj.props:obj).notes=e.target.value; };
+  if($('f-pii'))$('f-pii').onclick=()=>{obj.props.pii=!obj.props.pii; renderInspector(); renderNodes(); renderAnalysis();};
+  if($('f-off'))$('f-off').onclick=()=>{obj.offensive=!obj.offensive; renderInspector(); renderEdges(); renderAnalysis();};
+  if($('f-pasta'))$('f-pasta').onchange=e=>{obj.props.pasta=e.target.value;};
+  document.querySelectorAll('[data-stride]').forEach(cb=>cb.onchange=e=>{
+    const k=e.target.dataset.stride; obj.props.stride[k]=e.target.checked; renderNodes(); renderAnalysis();
+  });
+  if($('f-expand'))$('f-expand').onclick=()=>expandK8s(obj);
+  if($('pick-attack'))$('pick-attack').onclick=()=>pickTechnique('attack');
+  if($('pick-d3fend'))$('pick-d3fend').onclick=()=>pickTechnique('d3fend');
+  document.querySelectorAll('[data-rm]').forEach(x=>x.querySelector('.x').onclick=()=>{
+    const f=x.dataset.field, id=x.dataset.rm;
+    const arr = (sel.type==='node'?obj.props[f]:obj[f]);
+    const i=arr.findIndex(t=>t.id===id); if(i>=0)arr.splice(i,1);
+    renderInspector(); renderAnalysis();
+  });
+  document.querySelectorAll('[data-rmctrl]').forEach(x=>x.querySelector('.x').onclick=()=>{
+    obj.props.controls=(obj.props.controls||[]).filter(ct=>ct.type!==x.dataset.rmctrl);
+    renderInspector(); renderNodes(); renderAnalysis();
+  });
+  if($('f-del'))$('f-del').onclick=()=>deleteSelected();
+}
+
+/* =====================================================================
+   TECHNIQUE PICKER (ATT&CK / D3FEND) modal
+   ===================================================================== */
+function pickTechnique(kind){
+  const data = kind==='attack'?ATTACK:D3FEND;
+  const sel=selected; const obj = sel.type==='node'?nodeAt(sel.id): sel.type==='edge'?byId(state.edges,sel.id):byId(state.boundaries,sel.id);
+  const arr = sel.type==='node'?obj.props[kind]:obj[kind];
+  const title = kind==='attack'?'🗡️ MITRE ATT&CK — map offensive techniques':'🛡️ MITRE D3FEND — map defensive countermeasures';
+  let body=`<input class="search-box" id="tq" placeholder="Filter techniques…"><div class="mini-list" id="tlist"></div>`;
+  openModal(title,body,[{label:'Done',primary:true,fn:closeModal}]);
+  const render=(q='')=>{
+    q=q.toLowerCase(); let html='';
+    Object.entries(data).forEach(([tac,techs])=>{
+      const ts=techs.filter(([id,nm])=>!q||id.toLowerCase().includes(q)||nm.toLowerCase().includes(q));
+      if(!ts.length)return;
+      html+=`<div class="grp">${tac}</div>`;
+      ts.forEach(([id,nm])=>{
+        const has=arr.some(t=>t.id===id);
+        html+=`<label class="mtopt"><input type="checkbox" data-id="${id}" data-name="${esc(nm)}" ${has?'checked':''}>
+          <span><code>${id}</code> ${esc(nm)}</span></label>`;
+      });
+    });
+    document.getElementById('tlist').innerHTML=html||'<div style="padding:14px;color:var(--txt-2)">No matches.</div>';
+    document.querySelectorAll('#tlist input').forEach(cb=>cb.onchange=e=>{
+      const id=e.target.dataset.id, name=e.target.dataset.name;
+      if(e.target.checked){if(!arr.some(t=>t.id===id))arr.push({id,name});}
+      else{const i=arr.findIndex(t=>t.id===id);if(i>=0)arr.splice(i,1);}
+      renderInspector(); renderNodes(); renderAnalysis();
+    });
+  };
+  render();
+  document.getElementById('tq').oninput=e=>render(e.target.value);
+}
+
+/* =====================================================================
+   ANALYSIS TAB
+   ===================================================================== */
+function countNodeThreats(n){return Object.values(n.props.stride).filter(Boolean).length;}
+
+/* ---- Attack-tree style weighting (inspired by christian-schneider.net AttackTree) ----
+   Leaf weight per TTP/attack-vector & STRIDE exposure builds the attacker likelihood;
+   control effectiveness (D3FEND + applied controls) saturates and reduces residual risk. */
+const SCORE_NORM=(x,k)=>Math.round((1-Math.exp(-x/k))*100);
+function riskLevel(r){return r<25?{l:'Low',c:'var(--ok)'}:r<50?{l:'Medium',c:'var(--warn)'}:r<75?{l:'High',c:'#fb923c'}:{l:'Critical',c:'var(--danger)'};}
+function nodesInBoundary(b){return state.nodes.filter(n=>n.x>b.x&&n.x<b.x+b.w&&n.y>b.y&&n.y<b.y+b.h);}
+function scoreFrom(nodes,edges,bnd){
+  const ids=new Set(nodes.map(n=>n.id));
+  const off=edges.filter(e=>e.offensive&&(ids.has(e.from)||ids.has(e.to)));
+  let atk=0, def=0;
+  off.forEach(e=>atk+=6+3*((e.attack||[]).length));
+  nodes.forEach(n=>{ atk+=2.5*((n.props.attack||[]).length)+1.5*countNodeThreats(n); if(COMPONENTS[n.type].redteam)atk+=5;
+    def+=3*((n.props.d3fend||[]).length); (n.props.controls||[]).forEach(ct=>def+=4+1.5*ct.d3fend.length); if(COMPONENTS[n.type].blueteam)def+=5; });
+  if(bnd){ atk+=4*((bnd.attack||[]).length); def+=4*((bnd.d3fend||[]).length)+({trust:9,netpol:7,namespace:4,privacy:3}[bnd.type]||0); }
+  return {atk,def,off:off.length};
+}
+function boundaryScore(b,k){k=k||26;
+  const ins=nodesInBoundary(b); const r=scoreFrom(ins,state.edges,b);
+  const A=SCORE_NORM(r.atk,k), D=SCORE_NORM(r.def,k);
+  return {A,D,residual:Math.max(0,Math.round(A*(1-0.8*D/100))),off:r.off,inside:ins.length};
+}
+function scoreBar(label,val,color){return `<div style="font-size:10.5px;display:flex;justify-content:space-between;margin:7px 0 2px"><span>${label}</span><b style="color:${color}">${val}</b></div>
+  <div style="height:7px;background:var(--bg-3);border-radius:4px;overflow:hidden"><div style="height:100%;width:${val}%;background:${color}"></div></div>`;}
+function renderAnalysis(){
+  const el=document.getElementById('insp-analysis');
+  const nodes=state.nodes, edges=state.edges, bnds=state.boundaries;
+  const threats=nodes.reduce((a,n)=>a+countNodeThreats(n),0);
+  const offensive=edges.filter(e=>e.offensive).length;
+  const piiNodes=nodes.filter(n=>n.props.pii).length;
+  const attackIds=new Set(); nodes.forEach(n=>n.props.attack.forEach(t=>attackIds.add(t.id))); edges.forEach(e=>e.attack.forEach(t=>attackIds.add(t.id)));
+  const defIds=new Set(); nodes.forEach(n=>n.props.d3fend.forEach(t=>defIds.add(t.id))); bnds.forEach(b=>(b.d3fend||[]).forEach(t=>defIds.add(t.id)));
+  nodes.forEach(n=>(n.props.controls||[]).forEach(ct=>ct.d3fend.forEach(t=>defIds.add(t.id))));
+  const appliedControls=nodes.reduce((a,n)=>a+(n.props.controls||[]).length,0);
+  const trustB=bnds.filter(b=>b.type==='trust').length, pvB=bnds.filter(b=>b.type==='privacy').length;
+  const rtNodes=nodes.filter(n=>COMPONENTS[n.type].redteam).length;
+  const btNodes=nodes.filter(n=>COMPONENTS[n.type].blueteam).length;
+  bnds.forEach(b=>(b.attack||[]).forEach(t=>attackIds.add(t.id)));
+
+  // per element STRIDE breakdown
+  const tally={S:0,T:0,R:0,I:0,D:0,E:0};
+  nodes.forEach(n=>Object.entries(n.props.stride).forEach(([k,v])=>{if(v)tally[k]++;}));
+
+  const cov = attackIds.size? Math.min(100,Math.round(defIds.size/Math.max(attackIds.size,1)*100)) : 0;
+
+  el.innerHTML=`
+    <div class="kpi">
+      <div class="k"><div class="n" style="color:var(--accent-hi)">${nodes.length}</div><div class="l">Components</div></div>
+      <div class="k"><div class="n" style="color:var(--cyan)">${edges.length}</div><div class="l">Data flows</div></div>
+      <div class="k"><div class="n" style="color:var(--danger)">${threats}</div><div class="l">STRIDE threats</div></div>
+      <div class="k"><div class="n" style="color:var(--offense)">${offensive}</div><div class="l">Attack vectors</div></div>
+      <div class="k"><div class="n" style="color:var(--trust)">${trustB}</div><div class="l">Trust boundaries</div></div>
+      <div class="k"><div class="n" style="color:var(--privacy)">${piiNodes}</div><div class="l">PII assets</div></div>
+      <div class="k"><div class="n" style="color:var(--offense)">${rtNodes}</div><div class="l">Red-team infra</div></div>
+      <div class="k"><div class="n" style="color:var(--trust)">${btNodes}</div><div class="l">Blue-team controls</div></div>
+    </div>
+
+    <div class="an-card"><h4>⚔️ Offense ↔ Defense coverage</h4>
+      <div class="an-row"><span>ATT&CK techniques mapped</span><b style="color:#fca5a5">${attackIds.size}</b></div>
+      <div class="an-row"><span>D3FEND countermeasures</span><b style="color:#7dd3fc">${defIds.size}</b></div>
+      <div class="an-row"><span>Controls applied to assets</span><b style="color:#7dd3fc">${appliedControls}</b></div>
+      <div style="height:8px;background:var(--bg-3);border-radius:5px;margin-top:8px;overflow:hidden">
+        <div style="height:100%;width:${cov}%;background:linear-gradient(90deg,var(--trust),var(--privacy))"></div></div>
+      <div style="text-align:right;font-size:10px;color:var(--txt-2);margin-top:3px">${cov}% defensive coverage signal</div>
+    </div>
+
+    <div class="an-card"><h4>🛡️ STRIDE distribution</h4>
+      ${STRIDE.map(s=>`<div class="an-row"><span><span class="ck-tag tag-${s.k}">${s.k}</span> ${s.name}</span><b>${tally[s.k]}</b></div>`).join('')}
+    </div>
+
+    <div class="an-card"><h4>🔒 Privacy (PII)</h4>
+      <div class="an-row"><span>PII-flagged components</span><b>${piiNodes}</b></div>
+      <div class="an-row"><span>Data-protection zones</span><b>${pvB}</b></div>
+      ${piiNodes&&!pvB?`<div style="font-size:10.5px;color:var(--warn);margin-top:6px">⚠ PII present but no Data Protection Boundary defined.</div>`:''}
+    </div>
+
+    <div class="an-card"><h4>📋 Top exposed components</h4>
+      ${nodes.slice().sort((a,b)=>countNodeThreats(b)-countNodeThreats(a)).slice(0,6)
+        .map(n=>`<div class="an-row"><span>${esc(n.label)}</span><b style="color:${countNodeThreats(n)?'var(--danger)':'var(--txt-2)'}">${countNodeThreats(n)} threats</b></div>`).join('')||'<div style="color:var(--txt-2);font-size:11px">No components yet.</div>'}
+    </div>`;
+}
+
+/* =====================================================================
+   POINTER INTERACTION (place / drag / connect / pan / boundary resize)
+   ===================================================================== */
+let drag=null; // {mode, ...}
+
+canvas.addEventListener('pointerdown',e=>{
+  const w=screenToWorld(e.clientX,e.clientY);
+  const nodeEl=e.target.closest('.node');
+  const edgeEl=e.target.closest('.flow');
+  const bndEl=e.target.closest('.boundary');
+  const isResize=e.target.classList.contains('bnd-resize');
+
+  // --- placement of armed tool ---
+  if(armed){
+    const c=COMPONENTS[armed];
+    if(c.blueteam){
+      if(nodeEl){ applyControl(nodeEl.dataset.id, armed); }
+      else { addNode(armed,w.x,w.y); }
+      if(!e.shiftKey)disarm(); return;
+    }
+    if(c.kind==='node'){ addNode(armed,w.x,w.y); if(!e.shiftKey)disarm(); return; }
+    if(c.kind==='boundary'){ addBoundary(c.bnd,w.x,w.y); if(!e.shiftKey)disarm(); return; }
+    if(c.kind==='edge'||c.kind==='attack'){
+      if(nodeEl){
+        const id=nodeEl.dataset.id;
+        if(!connectFrom){connectFrom=id; showHint('Now click the <b>target</b> node.'); }
+        else{ addEdge(connectFrom,id,c.kind==='attack'); connectFrom=null; if(!e.shiftKey)disarm(); else showHint('Click next <b>source</b> node.'); }
+      }
+      return;
+    }
+  }
+
+  // --- resize boundary ---
+  if(isResize&&selected&&selected.type==='boundary'){
+    const b=byId(state.boundaries,selected.id);
+    drag={mode:'resize',b,start:w}; canvas.setPointerCapture(e.pointerId); return;
+  }
+  // --- select + drag node ---
+  if(nodeEl){
+    const id=nodeEl.dataset.id; select('node',id);
+    const n=nodeAt(id);
+    drag={mode:'node',n,dx:w.x-n.x,dy:w.y-n.y,moved:false};
+    canvas.setPointerCapture(e.pointerId); return;
+  }
+  // --- select edge ---
+  if(edgeEl){ select('edge',edgeEl.dataset.id); return; }
+  // --- select + drag boundary ---
+  if(bndEl){
+    const id=bndEl.dataset.id; select('boundary',id);
+    const b=byId(state.boundaries,id);
+    drag={mode:'boundary',b,dx:w.x-b.x,dy:w.y-b.y}; canvas.setPointerCapture(e.pointerId); return;
+  }
+  // --- pan / deselect ---
+  select(null);
+  drag={mode:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,moved:false};
+  canvas.classList.add('panning'); canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointermove',e=>{
+  const w=screenToWorld(e.clientX,e.clientY);
+  // live temp line while connecting
+  if(armed&&connectFrom&&(COMPONENTS[armed].kind==='edge'||COMPONENTS[armed].kind==='attack')){
+    const a=nodeAt(connectFrom); if(a)drawTempLine(a.x,a.y,w.x,w.y);
+  }
+  if(!drag)return;
+  if(drag.mode==='node'){drag.n.x=snap(w.x-drag.dx); drag.n.y=snap(w.y-drag.dy); drag.moved=true; renderNodes(); renderEdges();}
+  else if(drag.mode==='boundary'){drag.b.x=snap(w.x-drag.dx); drag.b.y=snap(w.y-drag.dy); renderBoundaries(); applyPiiZones();}
+  else if(drag.mode==='resize'){drag.b.w=Math.max(80,snap(w.x-drag.b.x)); drag.b.h=Math.max(60,snap(w.y-drag.b.y)); renderBoundaries(); applyPiiZones();}
+  else if(drag.mode==='pan'){view.x=drag.vx+(e.clientX-drag.sx); view.y=drag.vy+(e.clientY-drag.sy); drag.moved=true; applyView();}
+});
+
+canvas.addEventListener('pointerup',e=>{
+  if(drag){
+    if(drag.mode==='boundary'||drag.mode==='resize'){applyPiiZones(); renderNodes(); renderAnalysis();}
+    canvas.classList.remove('panning'); try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
+  }
+  drag=null;
+});
+
+// double-click a flow to toggle offensive; double-click a Kubernetes node to expand it
+canvas.addEventListener('dblclick',e=>{
+  const edgeEl=e.target.closest('.flow');
+  if(edgeEl){const ed=byId(state.edges,edgeEl.dataset.id); ed.offensive=!ed.offensive; render(); toast(ed.offensive?'→ attack vector ⚔':'→ data flow'); return;}
+  const nodeEl=e.target.closest('.node');
+  if(nodeEl){const n=nodeAt(nodeEl.dataset.id); if(n&&n.type==='k8s')expandK8s(n);}
+});
+
+// drag & drop from palette
+canvas.addEventListener('dragover',e=>e.preventDefault());
+canvas.addEventListener('drop',e=>{
+  e.preventDefault();
+  const tool=e.dataTransfer.getData('tool')||armed; if(!tool)return;
+  const c=COMPONENTS[tool]; const w=screenToWorld(e.clientX,e.clientY);
+  if(c.kind==='node')addNode(tool,w.x,w.y);
+  else if(c.kind==='boundary')addBoundary(c.bnd,w.x,w.y);
+  else armTool(tool);
+  disarm();
+});
+
+// zoom
+wrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  const old=view.k; const k=Math.min(2.6,Math.max(.25, old*(e.deltaY<0?1.12:0.89)));
+  view.x = mx-(mx-view.x)*(k/old); view.y = my-(my-view.y)*(k/old); view.k=k; applyView();
+},{passive:false});
+
+document.getElementById('zoom-in').onclick=()=>zoomBy(1.18);
+document.getElementById('zoom-out').onclick=()=>zoomBy(.85);
+document.getElementById('zoom-fit').onclick=fitView;
+function zoomBy(f){const r=canvas.getBoundingClientRect(),mx=r.width/2,my=r.height/2,old=view.k,k=Math.min(2.6,Math.max(.25,old*f));
+  view.x=mx-(mx-view.x)*(k/old);view.y=my-(my-view.y)*(k/old);view.k=k;applyView();}
+function fitView(){
+  const all=[...state.nodes.map(n=>({x:n.x-R,y:n.y-R,w:2*R,h:2*R})),...state.boundaries];
+  if(!all.length){view={x:0,y:0,k:1};applyView();return;}
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  all.forEach(o=>{minx=Math.min(minx,o.x);miny=Math.min(miny,o.y);maxx=Math.max(maxx,o.x+(o.w||0));maxy=Math.max(maxy,o.y+(o.h||0)+40);});
+  const r=canvas.getBoundingClientRect(); const pad=80;
+  const k=Math.min(1.4,Math.min((r.width-pad*2)/(maxx-minx||1),(r.height-pad*2)/(maxy-miny||1)));
+  view.k=Math.max(.25,k);
+  view.x=pad-minx*view.k+(r.width-pad*2-(maxx-minx)*view.k)/2;
+  view.y=pad-miny*view.k+(r.height-pad*2-(maxy-miny)*view.k)/2;
+  applyView();
+}
+
+// auto-flag PII for nodes inside privacy zones
+function applyPiiZones(){
+  const zones=state.boundaries.filter(b=>b.type==='privacy');
+  state.nodes.forEach(n=>{
+    const inside=zones.some(z=>n.x>z.x&&n.x<z.x+z.w&&n.y>z.y&&n.y<z.y+z.h);
+    if(inside)n.props.pii=true;
+  });
+}
+
+/* =====================================================================
+   DELETE / KEYBOARD
+   ===================================================================== */
+function deleteSelected(){
+  if(!selected)return;
+  if(selected.type==='node'){
+    state.nodes=state.nodes.filter(n=>n.id!==selected.id);
+    state.edges=state.edges.filter(e=>e.from!==selected.id&&e.to!==selected.id);
+  }
+  if(selected.type==='edge')state.edges=state.edges.filter(e=>e.id!==selected.id);
+  if(selected.type==='boundary')state.boundaries=state.boundaries.filter(b=>b.id!==selected.id);
+  select(null); render(); toast('Deleted');
+}
+window.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
+  if(e.key==='Escape'){disarm(); closeModal(); select(null);}
+  if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();deleteSelected();}
+});
+
+/* =====================================================================
+   MODALS: STRIDE / PASTA / LEGEND / REPORT
+   ===================================================================== */
+const overlay=document.getElementById('overlay');
+function openModal(title,bodyHtml,buttons){
+  document.getElementById('modal-title').innerHTML=title;
+  document.getElementById('modal-body').innerHTML=bodyHtml;
+  const f=document.getElementById('modal-foot'); f.innerHTML='';
+  (buttons||[{label:'Close',fn:closeModal}]).forEach(b=>{
+    const btn=document.createElement('button'); btn.className='tbtn'+(b.primary?' primary':''); btn.textContent=b.label; btn.onclick=b.fn; f.appendChild(btn);
+  });
+  overlay.classList.add('show');
+}
+function closeModal(){overlay.classList.remove('show');}
+document.getElementById('modal-close').onclick=closeModal;
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+
+function showStride(){
+  let rows='';
+  const map={external:'External Entity',process:'Process',store:'Data Store',flow:'Data Flow'};
+  Object.entries(map).forEach(([k,nm])=>{
+    rows+=`<tr><td><b style="color:var(--accent-hi)">${nm}</b></td>`+
+      STRIDE.map(s=>`<td style="text-align:center" class="${STRIDE_APPLIES[k].includes(s.k)?'x-mark':'o-mark'}">${STRIDE_APPLIES[k].includes(s.k)?'✓':'–'}</td>`).join('')+'</tr>';
+  });
+  const body=`
+    <p style="color:var(--txt-1);font-size:12px;margin-bottom:14px">STRIDE categorises threats by the security property they violate, and which apply to each data-flow-diagram element.</p>
+    <table class="matrix"><thead><tr><th>Element \\ Threat</th>${STRIDE.map(s=>`<th title="${s.def}">${s.k} · ${s.name.split(' ')[0]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${STRIDE.map(s=>`<div class="an-card"><h4><span class="ck-tag tag-${s.k}">${s.k}</span> ${s.name} <span style="margin-left:auto;color:var(--txt-2);font-weight:400">${s.prop}</span></h4>
+        <p style="font-size:11px;color:var(--txt-1)">${s.def}</p><p style="font-size:10.5px;color:var(--ok);margin-top:4px">↳ ${s.mit}</p></div>`).join('')}
+    </div>`;
+  openModal('🛡️ STRIDE — threat / element matrix',body);
+}
+
+function showPasta(){
+  const body=`<p style="color:var(--txt-1);font-size:12px;margin-bottom:8px">PASTA — Process for Attack Simulation & Threat Analysis. A risk-centric, 7-stage methodology. Skjaldborg maps each stage to canvas constructs.</p>`+
+    PASTA.map(p=>`<div class="pasta-stage"><div class="pasta-num">${p.n}</div><div>
+      <h4>${p.t}</h4><p>${p.d}</p><div class="map">↳ In Skjaldborg: ${p.m}</div></div></div>`).join('');
+  openModal('🍝 PASTA — 7-stage risk-centric process',body);
+}
+
+function showLegend(){
+  const body=`<div class="legend-grid">
+    <div class="legend-card"><h4><span class="swatch" style="background:var(--offense)"></span>⚔️ Attack Vector</h4>
+      <p>An <b>offensive</b> data flow mapped to <b>MITRE ATT&CK</b>. Renders red with a sword. Draw it like a flow, or double-click any flow to toggle.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:var(--trust)"></span>🛡️ Trust Boundary</h4>
+      <p>A blue <b>force field</b> (Star-Wars style) backed by <b>MITRE D3FEND</b> countermeasures. Enclose what it defends.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:var(--privacy)"></span>🔒 Data Protection</h4>
+      <p>Green zone marking <b>PII / privacy-relevant</b> assets needing explicit treatment (GDPR). Nodes inside are auto-flagged 🔒.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:var(--offense)"></span>☠ Red Team Infra</h4>
+      <p>Attacker-owned nodes in collapsible sub-categories: <b>C2 Frameworks</b> (Cobalt Strike, Brute Ratel, Sliver, Havoc, ArachneC2, AdaptixC2, custom) and <b>Phishing Infra</b> (EvilGinx2, GoPhish, Tangled, PhishingClub). Red ring + sword, pre-mapped to <b>ATT&CK</b>. Host them in a <b>Red Team Infrastructure</b> or <b>Grey Zone</b>.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:var(--trust)"></span>🛡️ Blue Team Defense</h4>
+      <p>Arm a defensive tool and <b>click a node to protect it</b> — it gets a cyan force-ring + shield badge and its <b>D3FEND</b> coverage is added to that asset. Click empty canvas instead to drop it as a standalone control. Grouped into collapsible sub-categories (EDR/XDR, NDR/NOC, Network Filtering, Cloud Security, Hardening & Deception).</p></div>
+    <div class="legend-card"><h4>⎈ Kubernetes drill-down</h4>
+      <p>Double-click a <b>Kubernetes</b> node (or use its inspector button) to expand it into Control Plane, etcd, Nodes, Pods, Services, Ingress, ServiceAccounts, Secrets & Kyverno — wrapped in a <b>Namespace</b> and a <b>NetworkPolicy</b> segmentation boundary.</p></div>
+    <div class="legend-card"><h4>🦝 Components</h4>
+      <p>Core: External Entity, Process, Data Store, Data Flow. Infra: IAM, AD, Cloud, Kubernetes, Docker, VM. Search & collapse groups in the left toolbox.</p></div>
+  </div>
+  <div class="an-card" style="margin-top:14px"><h4>Shortcuts</h4>
+    <div class="an-row"><span>Place tool & keep placing</span><b>Shift + click</b></div>
+    <div class="an-row"><span>Toggle attack vector on a flow</span><b>Double-click flow</b></div>
+    <div class="an-row"><span>Delete selection</span><b>Del / Backspace</b></div>
+    <div class="an-row"><span>Cancel tool</span><b>Esc</b></div>
+    <div class="an-row"><span>Pan / Zoom</span><b>Drag bg / Scroll</b></div>
+  </div>`;
+  openModal('＃ Legend & shortcuts',body);
+}
+
+function showReport(){
+  const rep=buildReport();
+  const body=`<div class="report"><pre>${esc(rep)}</pre></div>`;
+  openModal('📄 Threat model report',body,[
+    {label:'Copy',fn:()=>{navigator.clipboard.writeText(rep);toast('Copied to clipboard');}},
+    {label:'Download .md',primary:true,fn:()=>download('threat-model.md',rep,'text/markdown')}
+  ]);
+}
+function buildReport(){
+  const d=new Date().toISOString().slice(0,10);
+  let r=`# Skjaldborg Threat Model Report\n_Generated ${d} — Purple-Team Threat Modeling (STRIDE · PASTA · ATT&CK · D3FEND)_\n\n`;
+  r+=`## 1. Scope (components)\n`;
+  state.nodes.forEach(n=>{r+=`- **${n.label}** (${COMPONENTS[n.type].label})${n.props.pii?' 🔒 PII':''}${(n.props.controls||[]).length?` 🛡️[${n.props.controls.map(ct=>ct.label).join(', ')}]`:''}${n.props.notes?` — ${n.props.notes}`:''}\n`;});
+  r+=`\n## 2. Data flows\n`;
+  state.edges.forEach(e=>{const a=nodeAt(e.from),b=nodeAt(e.to);
+    r+=`- ${a?a.label:'?'} → ${b?b.label:'?'}${e.label?` : ${e.label}`:''}${e.offensive?` ⚔️ **ATTACK VECTOR**`:''}`;
+    if(e.attack.length)r+=` [${e.attack.map(t=>t.id).join(', ')}]`; r+=`\n`;});
+  r+=`\n## 3. Boundaries & zones\n`;
+  state.boundaries.forEach(b=>{const cfg=BND[b.type]||BND.trust; r+=`- **${b.label}** — ${cfg.label}`;
+    if(b.d3fend&&b.d3fend.length)r+=` D3FEND[${b.d3fend.map(t=>t.id).join(', ')}]`;
+    if(b.attack&&b.attack.length)r+=` ATT&CK[${b.attack.map(t=>t.id).join(', ')}]`; r+=`\n`;});
+  const rtN=state.nodes.filter(n=>COMPONENTS[n.type].redteam), btN=state.nodes.filter(n=>COMPONENTS[n.type].blueteam);
+  if(rtN.length){r+=`\n### Red Team infrastructure\n`; rtN.forEach(n=>r+=`- ${n.label} (${COMPONENTS[n.type].label})${n.props.attack.length?` — ${n.props.attack.map(t=>t.id).join(', ')}`:''}\n`);}
+  if(btN.length){r+=`\n### Blue Team defenses\n`; btN.forEach(n=>r+=`- ${n.label} (${COMPONENTS[n.type].label})${n.props.d3fend.length?` — ${n.props.d3fend.map(t=>t.id).join(', ')}`:''}\n`);}
+  r+=`\n## 4. STRIDE assessment\n`;
+  state.nodes.forEach(n=>{const ts=Object.entries(n.props.stride).filter(([,v])=>v).map(([k])=>k);
+    if(ts.length){r+=`### ${n.label}\n`; ts.forEach(k=>{const s=STRIDE.find(x=>x.k===k);r+=`- **${s.k} ${s.name}** (${s.prop}) — mitigate: ${s.mit}\n`;});r+=`\n`;}});
+  r+=`\n## 5. Offensive — MITRE ATT&CK\n`;
+  const atk=new Map(); state.nodes.forEach(n=>n.props.attack.forEach(t=>atk.set(t.id,t.name))); state.edges.forEach(e=>e.attack.forEach(t=>atk.set(t.id,t.name))); state.boundaries.forEach(b=>(b.attack||[]).forEach(t=>atk.set(t.id,t.name)));
+  atk.forEach((nm,id)=>r+=`- ${id} — ${nm}\n`); if(!atk.size)r+=`_None mapped._\n`;
+  r+=`\n## 6. Defensive — MITRE D3FEND\n`;
+  const def=new Map(); state.nodes.forEach(n=>n.props.d3fend.forEach(t=>def.set(t.id,t.name))); state.boundaries.forEach(b=>(b.d3fend||[]).forEach(t=>def.set(t.id,t.name))); state.nodes.forEach(n=>(n.props.controls||[]).forEach(ct=>ct.d3fend.forEach(t=>def.set(t.id,t.name))));
+  def.forEach((nm,id)=>r+=`- ${id} — ${nm}\n`); if(!def.size)r+=`_None mapped._\n`;
+  const pii=state.nodes.filter(n=>n.props.pii);
+  r+=`\n## 7. Privacy (PII)\n`;
+  if(pii.length)pii.forEach(n=>r+=`- ${n.label}\n`); else r+=`_No PII assets flagged._\n`;
+  return r;
+}
+
+/* =====================================================================
+   IMPORT / EXPORT / SAMPLE / CLEAR
+   ===================================================================== */
+function exportJSON(){download('threat-model.skjaldborg.json',JSON.stringify({v:1,state},null,2),'application/json'); toast('Model exported');}
+function importJSON(file){const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);state=o.state||o;select(null);render();fitView();toast('Model imported');}catch(_){toast('Invalid file');}};rd.readAsText(file);}
+function download(name,content,mime){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=name;a.click();}
+function clearCanvas(){if(state.nodes.length||state.boundaries.length){if(!confirm('Clear the entire canvas?'))return;}state={nodes:[],edges:[],boundaries:[],seq:1};select(null);render();toast('Canvas cleared');}
+
+function loadSample(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+  const ext=N('external','Browser Client',120,260);
+  const lb=N('process','API Gateway',360,260);
+  const auth=N('iam','Auth / IAM',360,90,{stride:{S:true,E:true}});
+  const app=N('process','Order Service',600,260,{stride:{S:true,T:true,E:true,I:true}});
+  const db=N('store','Customer DB',840,180,{pii:true,stride:{T:true,I:true,D:true}});
+  const k8s=N('k8s','EKS Cluster',600,430);
+  const cloud=N('cloud','AWS Account',840,430);
+  Eadd(ext,lb,'HTTPS Requests');
+  const a1=Eadd(ext,lb,'Credential Stuffing',true); a1.attack=[{id:'T1110',name:'Brute Force'},{id:'T1078',name:'Valid Accounts'}];
+  Eadd(lb,auth,'Token Validation');
+  Eadd(lb,app,'Order API');
+  const a2=Eadd(app,db,'SQL Reads/Writes');
+  const a3=Eadd(ext,db,'SQL Injection',true); a3.attack=[{id:'T1190',name:'Exploit Public-Facing Application'}];
+  Eadd(app,k8s,'Pod Scheduling');
+  Eadd(k8s,cloud,'IAM Role (IRSA)');
+  // boundaries
+  const tb={id:uid('b'),type:'trust',x:300,y:30,w:560,h:480,label:'DMZ Force Field',d3fend:[{id:'D3-NTA',name:'Network Traffic Analysis'},{id:'D3-MFA',name:'Multi-factor Authentication'}],attack:[],notes:'',pii:false};
+  const pv={id:uid('b'),type:'privacy',x:780,y:120,w:200,h:140,label:'PII Zone',d3fend:[],attack:[],notes:'Customer names, emails, addresses',pii:true};
+  state.boundaries.push(tb,pv);
+  // d3fend on a node
+  auth.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-CH',name:'Credential Hardening'}];
+  db.props.d3fend=[{id:'D3-ET',name:'Encrypted Tunnels'}];
+  // defensive controls applied directly onto assets ("acting on the tool")
+  lb.props.controls=[{type:'waf',label:'WAF',d3fend:nodeDefaults('waf').d3fend}];
+  app.props.controls=[{type:'crowdstrike',label:'CrowdStrike',d3fend:nodeDefaults('crowdstrike').d3fend}];
+  db.props.controls=[{type:'wiz',label:'Wiz',d3fend:nodeDefaults('wiz').d3fend}];
+
+  // ---- Red Team infrastructure (attacker side) ----
+  const havoc=N('havoc','Havoc C2',200,700);
+  const redir=N('redirector','HTTPS Redirector',470,700);
+  const rt={id:uid('b'),type:'redteam',x:140,y:638,w:170,h:135,label:'Red Team Infrastructure',d3fend:[],attack:[{id:'T1583',name:'Acquire Infrastructure'},{id:'T1587',name:'Develop Capabilities'}],notes:'Attacker-owned VPS / C2',pii:false};
+  const gz={id:uid('b'),type:'grey',x:400,y:638,w:185,h:135,label:'Grey Zone',d3fend:[],attack:[{id:'T1584',name:'Compromise Infrastructure'},{id:'T1090',name:'Proxy'}],notes:'Disposable redirectors / CDN front',pii:false};
+  state.boundaries.push(rt,gz);
+  Eadd(ext,redir,'Beacon egress (HTTPS)',true);
+  Eadd(redir,havoc,'Forward to C2',true);
+
+  // ---- Blue Team defenses ----
+  const edr=N('edr','CrowdStrike EDR',1060,150);
+  const dt=N('darktrace','Darktrace NDR',1060,300);
+  const cspm=N('cspm','Wiz CNAPP/CSPM',1060,450);
+  const hard=N('hardening','ASR / Hardening',1060,600);
+
+  applyPiiZones(); select(null); render(); fitView(); toast('Sample model loaded 🦝');
+}
+function addNodeSilent(type,x,y){const c=COMPONENTS[type];const dd=nodeDefaults(type);const n={id:uid('n'),type,label:c.label,x:snap(x),y:snap(y),props:{stride:{},pasta:'',attack:dd.attack,d3fend:dd.d3fend,pii:type==='store',notes:''}};state.nodes.push(n);return n;}
+function Eadd(a,b,label,off){const e={id:uid('e'),from:a.id,to:b.id,label:label||'',offensive:!!off,props:{stride:{}},attack:[],notes:''};state.edges.push(e);return e;}
+
+/* =====================================================================
+   HELPERS / WIRING
+   ===================================================================== */
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+let hintTimer;
+function showHint(html){const h=document.getElementById('hint');h.innerHTML=html;h.style.opacity='1';clearTimeout(hintTimer);hintTimer=setTimeout(()=>h.style.opacity='0',4200);}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+
+document.querySelectorAll('.insp-tabs button').forEach(b=>b.onclick=()=>setInspTab(b.dataset.itab));
+document.getElementById('btn-stride').onclick=showStride;
+document.getElementById('btn-pasta').onclick=showPasta;
+document.getElementById('btn-legend').onclick=showLegend;
+document.getElementById('btn-report').onclick=showReport;
+document.getElementById('btn-export').onclick=exportJSON;
+document.getElementById('btn-sample').onclick=loadSample;
+document.getElementById('btn-import').onclick=()=>document.getElementById('file-input').click();
+document.getElementById('file-input').onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0]);e.target.value='';};
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+buildPalette(); initCanvas(); render(); loadSample();
+</script>
+</body>
+</html>
