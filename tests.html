@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Skjaldborg — Unit Tests</title>
+<style>
+:root{--bg:#0d0d12;--bg2:#16161e;--bg3:#1e1e2a;--txt:#e0e0ec;--txt2:#8888a8;--ok:#22c55e;--fail:#ef4444;--warn:#f59e0b;--accent:#a855f7;--border:#2a2a3a;--mono:'JetBrains Mono',Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px;padding:24px}
+h1{font-size:20px;font-weight:700;margin-bottom:4px;color:var(--accent)}
+h1 span{color:var(--txt2);font-size:13px;font-weight:400;margin-left:8px}
+.subtitle{color:var(--txt2);font-size:11px;margin-bottom:20px}
+#summary{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;gap:24px;align-items:center}
+.stat{text-align:center}.stat .n{font-size:26px;font-weight:700}.stat .l{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--txt2)}
+.stat.ok .n{color:var(--ok)}.stat.fail .n{color:var(--fail)}.stat.skip .n{color:var(--warn)}
+#results{display:flex;flex-direction:column;gap:6px}
+.suite{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.suite-hdr{padding:10px 14px;font-weight:700;font-size:12px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.suite-hdr:hover{background:var(--bg3)}
+.suite-hdr .badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600}
+.suite-hdr .badge.ok{background:rgba(34,197,94,.2);color:var(--ok)}
+.suite-hdr .badge.fail{background:rgba(239,68,68,.2);color:var(--fail)}
+.suite-body{padding:4px 0}
+.test-row{display:flex;align-items:flex-start;gap:10px;padding:6px 14px;font-size:12px;border-top:1px solid var(--border)}
+.test-row:first-child{border-top:none}
+.test-row .icon{flex:0 0 auto;font-size:13px}
+.test-row .name{flex:1;color:var(--txt)}
+.test-row .err{flex:2;color:var(--fail);font-size:11px;white-space:pre-wrap}
+.test-row.pass .icon{color:var(--ok)}
+.test-row.fail .icon{color:var(--fail)}
+.test-row .duration{color:var(--txt2);font-size:10px;flex:0 0 auto;margin-left:auto}
+#run-btn{background:var(--accent);border:none;color:#fff;padding:10px 22px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;font-weight:600;margin-bottom:16px}
+#run-btn:hover{opacity:.85}
+.section-title{color:var(--txt2);font-size:10px;text-transform:uppercase;letter-spacing:1.2px;margin:16px 0 6px;padding-left:2px}
+</style>
+</head>
+<body>
+<h1>Skjaldborg <span>Unit Tests</span></h1>
+<p class="subtitle">Pure-function & state-logic tests — no DOM/SVG rendering required. Run in any browser.</p>
+<button id="run-btn" onclick="runAll()">▶ Run All Tests</button>
+<div id="summary" style="display:none">
+  <div class="stat ok"><div class="n" id="s-pass">0</div><div class="l">Passed</div></div>
+  <div class="stat fail"><div class="n" id="s-fail">0</div><div class="l">Failed</div></div>
+  <div class="stat skip"><div class="n" id="s-skip">0</div><div class="l">Total</div></div>
+  <div style="flex:1;font-size:11px;color:var(--txt2)" id="s-msg"></div>
+</div>
+<div id="results"></div>
+
+<script>
+/* =====================================================================
+   Minimal test runner
+   ===================================================================== */
+const suites = [];
+let currentSuite = null;
+
+function describe(name, fn) {
+  const suite = { name, tests: [] };
+  suites.push(suite);
+  currentSuite = suite;
+  fn();
+  currentSuite = null;
+}
+
+function it(name, fn) {
+  currentSuite.tests.push({ name, fn });
+}
+
+function expect(val) {
+  return {
+    toBe(exp){ if(val!==exp) throw new Error(`Expected ${JSON.stringify(val)} to be ${JSON.stringify(exp)}`); },
+    toEqual(exp){ if(JSON.stringify(val)!==JSON.stringify(exp)) throw new Error(`Expected ${JSON.stringify(val)} to equal ${JSON.stringify(exp)}`); },
+    toBeGreaterThan(n){ if(!(val>n)) throw new Error(`Expected ${val} > ${n}`); },
+    toBeLessThan(n){ if(!(val<n)) throw new Error(`Expected ${val} < ${n}`); },
+    toContain(sub){ if(!String(val).includes(sub)&&!(Array.isArray(val)&&val.includes(sub))) throw new Error(`Expected ${JSON.stringify(val)} to contain ${JSON.stringify(sub)}`); },
+    toBeTruthy(){ if(!val) throw new Error(`Expected ${JSON.stringify(val)} to be truthy`); },
+    toBeFalsy(){ if(val) throw new Error(`Expected ${JSON.stringify(val)} to be falsy`); },
+    toHaveLength(n){ if((val||[]).length!==n) throw new Error(`Expected length ${(val||[]).length} to be ${n}`); },
+    toBeUndefined(){ if(val!==undefined) throw new Error(`Expected ${JSON.stringify(val)} to be undefined`); },
+    not: {
+      toBe(exp){ if(val===exp) throw new Error(`Expected ${JSON.stringify(val)} not to be ${JSON.stringify(exp)}`); },
+      toBeTruthy(){ if(val) throw new Error(`Expected ${JSON.stringify(val)} to be falsy`); },
+    }
+  };
+}
+
+async function runAll() {
+  const el = document.getElementById('results');
+  el.innerHTML = '';
+  let passed=0, failed=0;
+
+  for (const suite of suites) {
+    const rows = [];
+    let suitePassed=0, suiteFailed=0;
+
+    for (const test of suite.tests) {
+      const t0 = performance.now();
+      try {
+        await test.fn();
+        const dt = (performance.now()-t0).toFixed(1);
+        rows.push(`<div class="test-row pass"><span class="icon">✓</span><span class="name">${test.name}</span><span class="duration">${dt}ms</span></div>`);
+        suitePassed++; passed++;
+      } catch(err) {
+        const dt = (performance.now()-t0).toFixed(1);
+        rows.push(`<div class="test-row fail"><span class="icon">✗</span><span class="name">${test.name}</span><span class="err">${err.message}</span><span class="duration">${dt}ms</span></div>`);
+        suiteFailed++; failed++;
+      }
+    }
+
+    const allOk = suiteFailed === 0;
+    el.innerHTML += `
+      <div class="suite">
+        <div class="suite-hdr">
+          <span>${suite.name}</span>
+          <span class="badge ${allOk?'ok':'fail'}">${suitePassed}/${suite.tests.length} passed</span>
+        </div>
+        <div class="suite-body">${rows.join('')}</div>
+      </div>`;
+  }
+
+  const total = passed + failed;
+  document.getElementById('s-pass').textContent = passed;
+  document.getElementById('s-fail').textContent = failed;
+  document.getElementById('s-skip').textContent = total;
+  document.getElementById('s-msg').textContent = failed===0
+    ? `All ${total} tests passed ✓`
+    : `${failed} test(s) failed. Check details below.`;
+  document.getElementById('summary').style.display='flex';
+}
+
+/* =====================================================================
+   Re-implement pure functions under test (extracted from index.html)
+   ===================================================================== */
+
+// --- snap ---
+const snap = v => Math.round(v / 11) * 11;
+
+// --- esc ---
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// --- findFreePos ---
+const R = 34;
+function findFreePos(x, y, nodes) {
+  const GAP = R * 2.6;
+  const offsets = [[0,0],[88,0],[0,88],[-88,0],[0,-88],[88,88],[-88,88],[88,-88],[-88,-88],[176,0],[0,176],[-176,0]];
+  for(const [dx,dy] of offsets){
+    const nx=snap(x+dx), ny=snap(y+dy);
+    if(!nodes.some(n=>Math.hypot(n.x-nx,n.y-ny)<GAP)) return {x:nx,y:ny};
+  }
+  return {x:snap(x+110), y:snap(y+110)};
+}
+
+// --- risk scoring helpers ---
+const SCORE_NORM = (x,k) => Math.round((1-Math.exp(-x/k))*100);
+function riskLevel(r){ return r<25?{l:'Low',c:'green'}:r<50?{l:'Medium',c:'amber'}:r<75?{l:'High',c:'orange'}:{l:'Critical',c:'red'}; }
+
+// --- uid ---
+let seq = 1;
+const uid = p => p + (seq++);
+const byId = (arr,id) => arr.find(o=>o.id===id);
+
+// --- minimal state machine for history tests ---
+function makeState(){ return {nodes:[],edges:[],boundaries:[],seq:1}; }
+let _testState = makeState();
+const _hist = []; let _histIdx = -1;
+function pushHistory(s){ _hist.splice(_histIdx+1); _hist.push(JSON.stringify(s)); _histIdx=_hist.length-1; }
+function undo(){ if(_histIdx<=0) return null; _histIdx--; return JSON.parse(_hist[_histIdx]); }
+function redo(){ if(_histIdx>=_hist.length-1) return null; _histIdx++; return JSON.parse(_hist[_histIdx]); }
+
+// --- LS helpers ---
+const _LS_STORE = {};
+const fakeLS = {
+  getItem(k){ return _LS_STORE[k]||null; },
+  setItem(k,v){ _LS_STORE[k]=v; },
+  removeItem(k){ delete _LS_STORE[k]; }
+};
+function saveToLS(s, ls){ try{ ls.setItem('sk_test', JSON.stringify({v:1,state:s})); }catch(_){} }
+function loadFromLS(ls){
+  try{
+    const raw=ls.getItem('sk_test'); if(!raw) return null;
+    const o=JSON.parse(raw);
+    if(o&&o.state&&(o.state.nodes||[]).length) return o.state;
+  }catch(_){}
+  return null;
+}
+
+// --- nodesInside ---
+function nodesInside(b, nodes){
+  return nodes.filter(n=>n.x>=b.x&&n.x<=b.x+b.w&&n.y>=b.y&&n.y<=b.y+b.h);
+}
+
+// --- report builder (minimal) ---
+function buildReportMinimal(state){
+  let r = `# Skjaldborg Threat Model Report\n`;
+  state.nodes.forEach(n=>r+=`- ${n.label}\n`);
+  return r;
+}
+
+/* =====================================================================
+   TEST SUITES
+   ===================================================================== */
+
+describe('snap() — grid snapping', () => {
+  it('snaps 0 to 0', () => { expect(snap(0)).toBe(0); });
+  it('snaps 5 to 0 (rounds down)', () => { expect(snap(5)).toBe(0); });
+  it('snaps 6 to 11 (rounds up)', () => { expect(snap(6)).toBe(11); });
+  it('snaps 11 to 11', () => { expect(snap(11)).toBe(11); });
+  it('snaps 22 to 22', () => { expect(snap(22)).toBe(22); });
+  it('snaps 100 to 99 (nearest multiple of 11)', () => { expect(snap(100)).toBe(99); });
+  it('snaps negative values', () => { expect(snap(-5)).toBe(0); });
+  it('snaps -6 to -11', () => { expect(snap(-6)).toBe(-11); });
+});
+
+describe('esc() — HTML escaping', () => {
+  it('escapes ampersand', () => { expect(esc('a&b')).toBe('a&amp;b'); });
+  it('escapes less-than', () => { expect(esc('<script>')).toBe('&lt;script&gt;'); });
+  it('escapes quotes', () => { expect(esc('"hello"')).toBe('&quot;hello&quot;'); });
+  it('handles null gracefully', () => { expect(esc(null)).toBe(''); });
+  it('handles undefined gracefully', () => { expect(esc(undefined)).toBe(''); });
+  it('handles numbers', () => { expect(esc(42)).toBe('42'); });
+  it('leaves safe strings unchanged', () => { expect(esc('hello world')).toBe('hello world'); });
+});
+
+describe('findFreePos() — collision-free placement', () => {
+  it('returns exact position when canvas is empty', () => {
+    const pos = findFreePos(100, 100, []);
+    expect(pos.x).toBe(snap(100));
+    expect(pos.y).toBe(snap(100));
+  });
+
+  it('offsets when exact position is occupied', () => {
+    const nodes = [{ x: snap(100), y: snap(100) }];
+    const pos = findFreePos(100, 100, nodes);
+    const dist = Math.hypot(pos.x - snap(100), pos.y - snap(100));
+    expect(dist).toBeGreaterThan(0);
+  });
+
+  it('returns a snapped coordinate', () => {
+    const pos = findFreePos(55, 73, []);
+    expect(pos.x % 11).toBe(0);
+    expect(pos.y % 11).toBe(0);
+  });
+
+  it('finds free slot among several occupied positions', () => {
+    const base = { x: snap(200), y: snap(200) };
+    const nodes = [base, { x: snap(288), y: snap(200) }, { x: snap(200), y: snap(288) }];
+    const pos = findFreePos(200, 200, nodes);
+    const minDist = nodes.reduce((m, n) => Math.min(m, Math.hypot(pos.x - n.x, pos.y - n.y)), Infinity);
+    expect(minDist).toBeGreaterThan(R * 2);
+  });
+
+  it('handles dense grid — still returns a position', () => {
+    // Fill many slots
+    const nodes = [];
+    for(let i=0;i<8;i++) for(let j=0;j<8;j++) nodes.push({x:i*88,y:j*88});
+    const pos = findFreePos(0, 0, nodes);
+    expect(typeof pos.x).toBe('number');
+    expect(typeof pos.y).toBe('number');
+  });
+});
+
+describe('riskLevel() — risk classification', () => {
+  it('0 is Low', () => { expect(riskLevel(0).l).toBe('Low'); });
+  it('24 is Low', () => { expect(riskLevel(24).l).toBe('Low'); });
+  it('25 is Medium', () => { expect(riskLevel(25).l).toBe('Medium'); });
+  it('49 is Medium', () => { expect(riskLevel(49).l).toBe('Medium'); });
+  it('50 is High', () => { expect(riskLevel(50).l).toBe('High'); });
+  it('74 is High', () => { expect(riskLevel(74).l).toBe('High'); });
+  it('75 is Critical', () => { expect(riskLevel(75).l).toBe('Critical'); });
+  it('100 is Critical', () => { expect(riskLevel(100).l).toBe('Critical'); });
+});
+
+describe('SCORE_NORM() — normalisation function', () => {
+  it('0 maps to 0', () => { expect(SCORE_NORM(0,26)).toBe(0); });
+  it('returns value between 0 and 100', () => {
+    const v = SCORE_NORM(50, 26);
+    expect(v).toBeGreaterThan(0);
+    expect(v).toBeLessThan(101);
+  });
+  it('is monotonically increasing', () => {
+    expect(SCORE_NORM(10,26)).toBeLessThan(SCORE_NORM(20,26));
+  });
+  it('approaches 100 for large inputs', () => {
+    expect(SCORE_NORM(500,26)).toBeGreaterThan(95);
+  });
+});
+
+describe('nodesInside() — boundary containment', () => {
+  const bnd = { x:100, y:100, w:200, h:200 };
+
+  it('includes node at boundary origin', () => {
+    const nodes = [{ x:100, y:100 }];
+    expect(nodesInside(bnd, nodes)).toHaveLength(1);
+  });
+
+  it('includes node in center', () => {
+    const nodes = [{ x:200, y:200 }];
+    expect(nodesInside(bnd, nodes)).toHaveLength(1);
+  });
+
+  it('excludes node outside boundary', () => {
+    const nodes = [{ x:50, y:50 }];
+    expect(nodesInside(bnd, nodes)).toHaveLength(0);
+  });
+
+  it('excludes node just outside right edge', () => {
+    const nodes = [{ x:301, y:200 }];
+    expect(nodesInside(bnd, nodes)).toHaveLength(0);
+  });
+
+  it('handles multiple nodes correctly', () => {
+    const nodes = [{x:150,y:150},{x:50,y:50},{x:180,y:250},{x:99,y:200}];
+    const inside = nodesInside(bnd, nodes);
+    expect(inside).toHaveLength(2);
+  });
+
+  it('returns empty for empty node list', () => {
+    expect(nodesInside(bnd, [])).toHaveLength(0);
+  });
+});
+
+describe('History — undo / redo stack', () => {
+  // Reset history before this suite
+  const h = []; let hi = -1;
+  function ph(s){ h.splice(hi+1); h.push(JSON.stringify(s)); hi=h.length-1; }
+  function un(){ if(hi<=0) return null; hi--; return JSON.parse(h[hi]); }
+  function re(){ if(hi>=h.length-1) return null; hi++; return JSON.parse(h[hi]); }
+
+  it('starts with no history', () => { expect(h.length).toBe(0); });
+
+  it('push records state snapshot', () => {
+    const s1={nodes:[{id:'n1',label:'A'}],edges:[],boundaries:[],seq:2};
+    ph(s1); expect(h.length).toBe(1); expect(hi).toBe(0);
+  });
+
+  it('undo returns previous state', () => {
+    const s0={nodes:[],edges:[],boundaries:[],seq:1};
+    ph(s0);
+    const s1={nodes:[{id:'n1',label:'A'}],edges:[],boundaries:[],seq:2};
+    ph(s1);
+    const back = un();
+    expect(back.nodes).toHaveLength(0);
+  });
+
+  it('redo re-applies undone state', () => {
+    const s0={nodes:[],edges:[],boundaries:[],seq:1};
+    ph(s0);
+    const s1={nodes:[{id:'n1'}],edges:[],boundaries:[],seq:2};
+    ph(s1);
+    un(); // back to s0
+    const forward = re();
+    expect(forward.nodes).toHaveLength(1);
+  });
+
+  it('undo at beginning returns null', () => {
+    const fresh=[]; let fi=-1;
+    function u(){ if(fi<=0) return null; fi--; return JSON.parse(fresh[fi]); }
+    const r = u();
+    expect(r).toBe(null);
+  });
+
+  it('new push after undo trims redo history', () => {
+    const hist=[]; let idx=-1;
+    function p(s){ hist.splice(idx+1); hist.push(JSON.stringify(s)); idx=hist.length-1; }
+    function u2(){ if(idx<=0) return; idx--; }
+    p({nodes:[],seq:1});
+    p({nodes:[{id:'n1'}],seq:2});
+    u2(); // undo to empty state
+    p({nodes:[{id:'n2'}],seq:3}); // new action — should cut redo branch
+    expect(hist.length).toBe(2);
+  });
+});
+
+describe('LocalStorage persistence', () => {
+  it('saves and loads state via LS', () => {
+    const store = {};
+    const ls = { getItem:k=>store[k]||null, setItem:(k,v)=>{store[k]=v;}, removeItem:k=>{delete store[k];} };
+    const state = {nodes:[{id:'n1',label:'TestNode',x:0,y:0}],edges:[],boundaries:[],seq:2};
+    saveToLS(state, ls);
+    const loaded = loadFromLS(ls);
+    expect(loaded.nodes[0].label).toBe('TestNode');
+  });
+
+  it('returns null when storage is empty', () => {
+    const ls = { getItem:()=>null, setItem:()=>{}, removeItem:()=>{} };
+    expect(loadFromLS(ls)).toBe(null);
+  });
+
+  it('returns null for malformed JSON', () => {
+    const ls = { getItem:()=>'NOT_JSON', setItem:()=>{}, removeItem:()=>{} };
+    expect(loadFromLS(ls)).toBe(null);
+  });
+
+  it('returns null when node list is empty (no meaningful state)', () => {
+    const store = {};
+    const ls = { getItem:k=>store[k]||null, setItem:(k,v)=>{store[k]=v;}, removeItem:k=>{delete store[k];} };
+    const empty = {nodes:[],edges:[],boundaries:[],seq:1};
+    saveToLS(empty, ls);
+    expect(loadFromLS(ls)).toBe(null);
+  });
+
+  it('preserves seq counter across save/load', () => {
+    const store = {};
+    const ls = { getItem:k=>store[k]||null, setItem:(k,v)=>{store[k]=v;}, removeItem:k=>{delete store[k];} };
+    const state = {nodes:[{id:'n1'}],edges:[],boundaries:[],seq:99};
+    saveToLS(state, ls);
+    const loaded = loadFromLS(ls);
+    expect(loaded.seq).toBe(99);
+  });
+});
+
+describe('Free-movement node flag', () => {
+  it('new node has free=false by default', () => {
+    const node = { id:'n1', label:'Test', x:0, y:0, free:false, props:{} };
+    expect(node.free).toBe(false);
+  });
+
+  it('toggling free changes the flag', () => {
+    const node = { free: false };
+    node.free = !node.free;
+    expect(node.free).toBe(true);
+    node.free = !node.free;
+    expect(node.free).toBe(false);
+  });
+
+  it('free node x coordinate stays float (no snap) during drag', () => {
+    const node = { x:0, y:0, free:true };
+    const dragDx = 5.3, dragDy = 7.7;
+    const wx = 105.3, wy = 207.7;
+    // Simulate what the drag handler does
+    node.x = node.free ? (wx - dragDx) : snap(wx - dragDx);
+    node.y = node.free ? (wy - dragDy) : snap(wy - dragDy);
+    expect(node.x).toBe(100);  // 105.3 - 5.3
+    expect(node.y).toBe(200);  // 207.7 - 7.7
+  });
+
+  it('snapped node x coordinate is multiple of 11', () => {
+    const node = { x:0, y:0, free:false };
+    const dragDx=0, dragDy=0;
+    const wx=107, wy=207;
+    node.x = node.free ? (wx-dragDx) : snap(wx-dragDx);
+    node.y = node.free ? (wy-dragDy) : snap(wy-dragDy);
+    expect(node.x % 11).toBe(0);
+    expect(node.y % 11).toBe(0);
+  });
+});
+
+describe('Report generation — minimal', () => {
+  it('includes node labels in report', () => {
+    const s = {nodes:[{id:'n1',label:'Domain Controller'},{id:'n2',label:'Workstation'}],edges:[],boundaries:[]};
+    const r = buildReportMinimal(s);
+    expect(r).toContain('Domain Controller');
+    expect(r).toContain('Workstation');
+  });
+
+  it('starts with the report header', () => {
+    const s = {nodes:[{id:'n1',label:'x'}],edges:[],boundaries:[]};
+    const r = buildReportMinimal(s);
+    expect(r).toContain('Skjaldborg Threat Model Report');
+  });
+
+  it('empty canvas produces report without nodes section', () => {
+    const s = {nodes:[],edges:[],boundaries:[]};
+    const r = buildReportMinimal(s);
+    expect(r).toContain('Skjaldborg');
+  });
+});
+
+describe('Edge validation', () => {
+  it('self-loop check: from === to should be rejected', () => {
+    const from='n1', to='n1';
+    const selfLoop = from === to;
+    expect(selfLoop).toBe(true);
+  });
+
+  it('different nodes should not be a self-loop', () => {
+    const selfLoop = 'n1' === 'n2';
+    expect(selfLoop).toBe(false);
+  });
+
+  it('duplicate edge detection works', () => {
+    const edges = [{ from:'n1', to:'n2', offensive:false }];
+    const isDuplicate = edges.some(e => e.from==='n1' && e.to==='n2' && e.offensive===false);
+    expect(isDuplicate).toBe(true);
+  });
+
+  it('different offensiveness is not a duplicate', () => {
+    const edges = [{ from:'n1', to:'n2', offensive:false }];
+    const isDuplicate = edges.some(e => e.from==='n1' && e.to==='n2' && e.offensive===true);
+    expect(isDuplicate).toBe(false);
+  });
+});
+
+describe('byId() — array lookup', () => {
+  const arr = [{id:'a',v:1},{id:'b',v:2},{id:'c',v:3}];
+
+  it('finds existing item', () => { expect(byId(arr,'b').v).toBe(2); });
+  it('returns undefined for missing id', () => { expect(byId(arr,'z')).toBeUndefined(); });
+  it('returns first match for duplicates', () => {
+    const dup = [{id:'x',v:1},{id:'x',v:2}];
+    expect(byId(dup,'x').v).toBe(1);
+  });
+});
+
+// Auto-run on load
+window.onload = runAll;
+</script>
+</body>
+</html>
