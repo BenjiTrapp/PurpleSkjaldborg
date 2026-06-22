@@ -140,8 +140,24 @@ header.topbar{
 .tbtn.primary{background:var(--accent-lo);border-color:var(--accent);color:#fff}
 .tbtn.primary:hover{background:var(--accent)}
 .tbtn.ghost{background:transparent;border-color:transparent}
-.user-chip{display:flex;align-items:center;gap:8px;color:var(--txt-1);font-size:11.5px;padding-left:6px;border-left:1px solid var(--border);margin-left:4px}
-.user-chip .av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:12px}
+.user-chip{display:none}
+.user-chip .av{display:none}
+
+/* context menu */
+#ctx-menu{position:fixed;z-index:500;min-width:180px;background:var(--bg-3);border:1px solid var(--border-hi);border-radius:10px;padding:5px 0;box-shadow:0 12px 40px -8px rgba(0,0,0,.6);display:none;backdrop-filter:blur(8px)}
+#ctx-menu.show{display:block}
+#ctx-menu .ctx-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:11.5px;color:var(--txt-0);cursor:pointer;transition:.1s}
+#ctx-menu .ctx-item:hover{background:var(--accent-lo);color:#fff}
+#ctx-menu .ctx-item .ctx-key{margin-left:auto;font-size:9.5px;color:var(--txt-2);font-family:var(--mono)}
+#ctx-menu .ctx-sep{height:1px;background:var(--border);margin:4px 8px}
+#ctx-menu .ctx-item.danger{color:#f87171}
+#ctx-menu .ctx-item.danger:hover{background:rgba(239,68,68,.15)}
+
+/* lock badge on boundary */
+.bnd-lock{cursor:pointer;opacity:.7;transition:opacity .15s}
+.bnd-lock:hover{opacity:1}
+.bnd-lock circle{transition:r .15s}
+.bnd-lock:hover circle{r:12}
 
 /* ---------- Canvas region ---------- */
 #stage{flex:1;display:flex;overflow:hidden;position:relative}
@@ -290,9 +306,46 @@ svg#canvas.panning{cursor:grabbing}
 @keyframes ffpulse{0%,100%{opacity:.55}50%{opacity:.9}}
 @keyframes dashmove{to{stroke-dashoffset:-24}}
 @keyframes flowmove{to{stroke-dashoffset:-16}}
+@keyframes tunnelflow{to{stroke-dashoffset:-40}}
+@keyframes tunnelpulse{0%,100%{opacity:.45}50%{opacity:.75}}
 .ff-border{animation:ffpulse 2.4s ease-in-out infinite}
 .flow-anim{stroke-dasharray:5 6;animation:flowmove .8s linear infinite}
 .flow-anim.off{stroke-dasharray:6 5;animation:flowmove .55s linear infinite}
+.tunnel-core{stroke-dasharray:12 8;animation:tunnelflow 1.2s linear infinite}
+.tunnel-core.off{animation:tunnelflow .8s linear infinite}
+.tunnel-glow{animation:tunnelpulse 2s ease-in-out infinite}
+
+/* ---------- Help Panel ---------- */
+#help-overlay{position:fixed;inset:0;background:rgba(5,5,9,.92);backdrop-filter:blur(8px);z-index:9000;display:none;flex-direction:column;overflow:hidden}
+#help-overlay.show{display:flex}
+.help-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--border);flex:0 0 auto}
+.help-bar h2{font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px}
+.help-bar .x{background:none;border:none;color:var(--txt-1);font-size:26px;line-height:1;cursor:pointer}
+.help-bar .x:hover{color:var(--txt-0)}
+.help-tabs{display:flex;gap:2px;padding:0 28px;border-bottom:1px solid var(--border);flex:0 0 auto;background:var(--bg-1)}
+.help-tabs button{background:none;border:none;padding:11px 18px;font-size:12px;font-weight:600;color:var(--txt-2);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.help-tabs button:hover{color:var(--txt-0)}
+.help-tabs button.active{color:var(--accent-hi);border-bottom-color:var(--accent-hi)}
+.help-body{flex:1;overflow-y:auto;padding:28px 32px;line-height:1.65}
+.help-body h3{font-size:15px;font-weight:700;margin:24px 0 10px;color:var(--accent-hi);border-bottom:1px solid var(--border);padding-bottom:6px}
+.help-body h3:first-child{margin-top:0}
+.help-body p{font-size:12.5px;color:var(--txt-1);margin-bottom:10px;max-width:700px}
+.help-body ul{padding-left:18px;margin-bottom:12px}
+.help-body li{font-size:12px;color:var(--txt-1);margin-bottom:5px;line-height:1.6}
+.help-body li b{color:var(--txt-0)}
+.help-body code{background:var(--bg-3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px;color:var(--accent-hi)}
+.help-body .kb{display:inline-block;background:var(--bg-3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;color:var(--txt-0);margin:0 2px}
+.help-body .hl{background:var(--accent-lo);border-radius:4px;padding:10px 14px;margin:10px 0 14px;border-left:3px solid var(--accent)}
+.help-body .hl p{margin:0;color:var(--txt-0)}
+.help-body .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:12px 0}
+.help-body .card{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:14px}
+.help-body .card h4{font-size:12px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.help-body .card p{font-size:11.5px;margin:0}
+.help-body .color-key{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.help-body .color-key .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto}
+.help-body table{width:100%;border-collapse:collapse;font-size:11.5px;margin:10px 0 16px}
+.help-body th,.help-body td{border:1px solid var(--border);padding:7px 10px;text-align:left}
+.help-body th{background:var(--bg-3);color:var(--txt-1);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
 </style>
 </head>
 <body>
@@ -321,16 +374,17 @@ svg#canvas.panning{cursor:grabbing}
         <button class="tbtn" id="btn-pasta" title="PASTA stages">🍝 PASTA</button>
         <button class="tbtn" id="btn-legend" title="Legend">＃ Legend</button>
         <button class="tbtn" id="btn-report" title="Threat report">📄 Report</button>
+        <button class="tbtn" id="btn-arrange" title="Auto-arrange layout">⊞ Arrange</button>
         <button class="tbtn ghost" id="btn-import" title="Import JSON">⬇</button>
         <button class="tbtn" id="btn-export" title="Export JSON">⬆ Save</button>
         <button class="tbtn primary" id="btn-sample">✨ Sample</button>
-        <div class="user-chip"><span class="av">🦝</span><span>Benji</span></div>
+        <button class="tbtn" id="btn-help" title="Help & tutorial (?)">? Help</button>
       </div>
     </header>
 
     <div id="stage">
       <div id="canvas-wrap">
-        <div id="hint">Tip: click a component in the left toolbox, then click the canvas to place it.</div>
+        <div id="hint">Tip: click a component in the left toolbox, then click the canvas to place. Right-click for context menu.</div>
         <svg id="canvas"></svg>
         <div class="zoom-controls">
           <button id="zoom-in">+</button>
@@ -361,7 +415,23 @@ svg#canvas.panning{cursor:grabbing}
     <div class="mfoot" id="modal-foot"></div>
   </div>
 </div>
+
+<div id="help-overlay">
+  <div class="help-bar">
+    <h2>? PurpleSkjaldborg — Help</h2>
+    <button class="x" id="help-close">×</button>
+  </div>
+  <div class="help-tabs">
+    <button class="active" data-htab="tutorial">Tutorial</button>
+    <button data-htab="metamodels">Metamodels</button>
+    <button data-htab="workflow">Workflow</button>
+    <button data-htab="shortcuts">Shortcuts</button>
+    <button data-htab="about">About</button>
+  </div>
+  <div class="help-body" id="help-body"></div>
+</div>
 <div id="toast"></div>
+<div id="ctx-menu"></div>
 <input type="file" id="file-input" accept=".json,.skjaldborg" style="display:none">
 
 <script>
@@ -425,7 +495,12 @@ const ICONS = {
   webapp:'<path d="M3 5h18v14H3zM3 9h18M6 7h.01M8.5 7h.01M11 7h.01" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
   mobileapp:'<path d="M7 3h10v18H7zM10.5 18h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
   api:'<path d="M9 6L4 12l5 6M15 6l5 6l-5 6M13.5 5l-3 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  crd:'<path d="M5 5h6v2.5a1.6 1.6 0 0 0 3.2 0V5H19v6.3h-2.5a1.6 1.6 0 0 0 0 3.2H19V19h-6v-2.5a1.6 1.6 0 0 0-3.2 0V19H5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'
+  crd:'<path d="M5 5h6v2.5a1.6 1.6 0 0 0 3.2 0V5H19v6.3h-2.5a1.6 1.6 0 0 0 0 3.2H19V19h-6v-2.5a1.6 1.6 0 0 0-3.2 0V19H5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  // attacker techniques: pivoting & LOL
+  tunnel:'<path d="M3 12c0-3.3 4-6 9-6s9 2.7 9 6s-4 6-9 6s-9-2.7-9-6M7 12h10M7 9.5c2 1 5 1.5 5 1.5M17 9.5c-2 1-5 1.5-5 1.5M7 14.5c2-1 5-1.5 5-1.5M17 14.5c-2-1-5-1.5-5-1.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>',
+  lolbin:'<path d="M4 17l3-3M7 20l3-3M4 5h16v11H4zM8 9h1M11 9h5M8 11.5h8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  pivot:'<path d="M5 5a2 2 0 1 0 0 4a2 2 0 0 0 0-4M19 15a2 2 0 1 0 0 4a2 2 0 0 0 0-4M7 7l4 4M13 13l4 4M12 12a2.5 2.5 0 1 0 0 .01M9 6h3M12 18h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  filetransfer:'<path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M12 10v6M9 16l3 3l3-3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
 };
 
 const COMPONENTS = {
@@ -457,8 +532,11 @@ const COMPONENTS = {
   serverless:{label:'Function',      sub:'lambda · functions',    icon:'serverless',color:'#fb923c',kind:'node', desc:'Serverless function (Lambda / Cloud Functions).'},
   // boundaries category
   attack:  {label:'Attack Vector',   sub:'offensive · ATT&CK',    icon:'attack',  color:'#ef4444', kind:'attack', desc:'Offensive path mapped to MITRE ATT&CK. Turns a flow red with a sword. Click source then target.'},
+  tunnel_off:{label:'Pivot / Tunnel',sub:'offensive tunnel',       icon:'tunnel',  color:'#ef4444', kind:'tunnel_off', desc:'Offensive tunnel / pivot (Ligolo-ng, Chisel, SSH). Thick glowing red energy stream between nodes. Click source then target.'},
+  tunnel_def:{label:'Secure Tunnel', sub:'VPN · encrypted',       icon:'tunnel',  color:'#38bdf8', kind:'tunnel_def', desc:'Defensive / legitimate encrypted tunnel (VPN, mTLS, WireGuard). Thick glowing blue energy stream. Click source then target.'},
   trust:   {label:'Trust Boundary',  sub:'force field · D3FEND',  icon:'trust',   color:'#38bdf8', kind:'boundary', bnd:'trust', desc:'Defensive force field mapped to MITRE D3FEND. Drag to enclose what it protects.'},
   privacy: {label:'Data Protection', sub:'PII · GDPR',            icon:'privacy', color:'#22c55e', kind:'boundary', bnd:'privacy', desc:'Marks privacy-relevant assets (PII) requiring explicit protection.'},
+  cloudbnd:{label:'Cloud Boundary',  sub:'aws · azure · gcp',     icon:'cloud',   color:'#7dd3fc', kind:'boundary', bnd:'cloudbnd', desc:'Cloud environment boundary — encompasses cloud-native resources (accounts, subscriptions, tenants).'},
 
   // ---- Kubernetes sub-components ----
   k8s_cp:   {label:'Control Plane',  sub:'api · scheduler',    icon:'k8s_cp',   color:'#326ce5', kind:'node', desc:'Kubernetes control plane (API server, scheduler, controller-manager).'},
@@ -519,13 +597,28 @@ const COMPONENTS = {
 
   // ---- offensive / disposable zones ----
   redteam:   {label:'Red Team Infra',sub:'offensive perimeter',icon:'skull',      color:'#ef4444', kind:'boundary', bnd:'redteam', desc:'Red Team Infrastructure perimeter — attacker-owned C2, staging & tooling.'},
-  grey:      {label:'Grey Zone',     sub:'disposable hosts',   icon:'redirector', color:'#94a3b8', kind:'boundary', bnd:'grey', desc:'Grey-zone hosting (VPS, CDN, redirectors, compromised infra) fronting the red team estate.'}
+  grey:      {label:'Grey Zone',     sub:'disposable hosts',   icon:'redirector', color:'#94a3b8', kind:'boundary', bnd:'grey', desc:'Grey-zone hosting (VPS, CDN, redirectors, compromised infra) fronting the red team estate.'},
+
+  // ---- Attacker Techniques (Living off the Land, Pivoting, Tunneling) ----
+  lolbin:    {label:'LOLBins/LOLBas',sub:'living off the land',icon:'lolbin',     color:'#f97316', kind:'node', redteam:true, desc:'Living off the Land Binaries/Scripts — abusing legitimate OS tools (certutil, rundll32, mshta, PowerShell, wmic) to evade detection.'},
+  loldriver: {label:'LOLDrivers',    sub:'vulnerable drivers', icon:'lolbin',     color:'#ea580c', kind:'node', redteam:true, desc:'Living off the Land Drivers — exploiting legitimate signed drivers to disable EDR or gain kernel access (BYOVD).'},
+  ligolo:    {label:'Ligolo-ng',     sub:'tunnel · pivot',     icon:'tunnel',     color:'#10b981', kind:'node', redteam:true, desc:'Ligolo-ng — lightweight tunneling/pivoting tool using TUN interfaces. Creates reverse tunnels without SOCKS.'},
+  sshtunnel: {label:'SSH Tunnel',    sub:'port forward · pivot',icon:'tunnel',    color:'#6366f1', kind:'node', redteam:true, desc:'SSH tunneling — local/remote/dynamic port forwarding (-L/-R/-D) for pivoting through compromised hosts.'},
+  chisel:    {label:'Chisel',        sub:'HTTP tunnel',        icon:'tunnel',     color:'#0ea5e9', kind:'node', redteam:true, desc:'Chisel — fast TCP/UDP tunnel over HTTP/HTTPS with SSH-like encryption. Single binary, firewall bypass.'},
+  sshuttle:  {label:'SSHuttle',      sub:'VPN over SSH',       icon:'tunnel',     color:'#8b5cf6', kind:'node', redteam:true, desc:'SSHuttle — transparent proxy / poor-man\'s VPN over SSH. Routes entire subnets without SOCKS.'},
+  socatpivot:{label:'socat',         sub:'relay · multiplex',  icon:'pivot',      color:'#94a3b8', kind:'node', redteam:true, desc:'socat — multipurpose relay tool for bidirectional data streams. Port forwarding, protocol bridging, pivoting.'},
+  proxychains:{label:'ProxyChains',  sub:'proxy chain',        icon:'pivot',      color:'#64748b', kind:'node', redteam:true, desc:'ProxyChains — force TCP connections through SOCKS4/5 or HTTP proxies. Chain multiple hops for attribution hiding.'},
+  rpivot:    {label:'rpivot/revsocks',sub:'reverse SOCKS',     icon:'pivot',      color:'#d946ef', kind:'node', redteam:true, desc:'rpivot / revsocks — reverse SOCKS proxy tunneling inbound connections through a pivot host behind NAT/firewall.'},
+  dnscat:    {label:'dnscat2',       sub:'DNS tunnel',         icon:'tunnel',     color:'#f59e0b', kind:'node', redteam:true, desc:'dnscat2 — C2 and data exfil over DNS queries. Encrypts and encapsulates traffic inside DNS records to bypass firewalls.'},
+  iodine:    {label:'Iodine',        sub:'IP-over-DNS',        icon:'tunnel',     color:'#eab308', kind:'node', redteam:true, desc:'Iodine — IP-over-DNS tunneling. Creates a TUN device and tunnels IPv4 inside DNS queries for full network access.'},
+  filetransfer:{label:'File Transfer',sub:'staging · exfil',   icon:'filetransfer',color:'#fb923c', kind:'node', redteam:true, desc:'File transfer techniques — certutil, bitsadmin, curl, wget, scp, nc for staging payloads and exfiltrating data.'}
 };
 
 // Boundary / zone types — visual + semantic config
 const BND = {
   trust:  {label:'Trust Boundary',   color:'var(--trust)',   glow:'var(--trust-glow)',   grad:'ff-grad', icon:'trust',      dash:'10 6', anim:true,  inner:true,  mapping:'d3fend', defLabel:'Trust Boundary'},
   privacy:{label:'Data Protection',  color:'var(--privacy)', glow:'var(--privacy-glow)', grad:'pv-grad', icon:'privacy',    dash:'2 6',  anim:false, inner:false, mapping:'pii',    defLabel:'PII Zone'},
+  cloudbnd:{label:'Cloud Boundary',  color:'#7dd3fc',        glow:'#bae6fd',             grad:'cl-grad', icon:'cloud',      dash:'6 8',  anim:false, inner:true,  mapping:'d3fend', defLabel:'Cloud'},
   redteam:{label:'Red Team Infra',   color:'var(--offense)', glow:'var(--offense-glow)', grad:'rt-grad', icon:'skull',      dash:'8 6',  anim:true,  inner:false, mapping:'attack', defLabel:'Red Team Infrastructure'},
   grey:   {label:'Grey Zone',        color:'#94a3b8',        glow:'#cbd5e1',             grad:'gr-grad', icon:'redirector', dash:'3 6',  anim:false, inner:false, mapping:'attack', defLabel:'Grey Zone'},
   namespace:{label:'Namespace',      color:'#6366f1',        glow:'#a5b4fc',             grad:'ns-grad', icon:'namespace',  dash:'4 6',  anim:false, inner:false, mapping:'d3fend', defLabel:'Namespace'},
@@ -549,6 +642,19 @@ const NODE_DEFAULTS = {
   gophish:{a:[['T1566','Phishing'],['T1598','Phishing for Information']]},
   tangled:{a:[['T1566','Phishing'],['T1585','Establish Accounts']]},
   phishingclub:{a:[['T1566','Phishing'],['T1585','Establish Accounts']]},
+  // attacker techniques — pivoting & LOL
+  lolbin:{a:[['T1218','System Binary Proxy Execution'],['T1059','Command & Scripting Interpreter'],['T1197','BITS Jobs'],['T1047','Windows Management Instrumentation'],['T1036','Masquerading']]},
+  loldriver:{a:[['T1014','Rootkit'],['T1562','Impair Defenses'],['T1068','Exploitation for Priv. Escalation']]},
+  ligolo:{a:[['T1572','Protocol Tunneling'],['T1090.001','Internal Proxy'],['T1021','Remote Services'],['T1570','Lateral Tool Transfer']]},
+  sshtunnel:{a:[['T1572','Protocol Tunneling'],['T1021.004','SSH'],['T1090.001','Internal Proxy'],['T1573','Encrypted Channel']]},
+  chisel:{a:[['T1572','Protocol Tunneling'],['T1090','Proxy'],['T1071.001','Web Protocols'],['T1573','Encrypted Channel']]},
+  sshuttle:{a:[['T1572','Protocol Tunneling'],['T1021.004','SSH'],['T1090.001','Internal Proxy']]},
+  socatpivot:{a:[['T1090','Proxy'],['T1572','Protocol Tunneling'],['T1095','Non-Application Layer Protocol']]},
+  proxychains:{a:[['T1090','Proxy'],['T1090.001','Internal Proxy'],['T1090.002','External Proxy']]},
+  rpivot:{a:[['T1572','Protocol Tunneling'],['T1090','Proxy'],['T1090.001','Internal Proxy']]},
+  dnscat:{a:[['T1071.004','DNS'],['T1572','Protocol Tunneling'],['T1001','Data Obfuscation'],['T1048','Exfil over Alt Protocol']]},
+  iodine:{a:[['T1071.004','DNS'],['T1572','Protocol Tunneling'],['T1090','Proxy']]},
+  filetransfer:{a:[['T1105','Ingress Tool Transfer'],['T1197','BITS Jobs'],['T1570','Lateral Tool Transfer'],['T1048','Exfil over Alt Protocol']]},
   // blue team -> D3FEND
   edr:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-PT','Process Termination']]},
   crowdstrike:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-PT','Process Termination']]},
@@ -604,7 +710,20 @@ const STRIDE_APPLIES = {
   sa:['S','R','I','E'],
   secret:['T','R','I','D'],
   configmap:['T','I','D'],
-  kyverno:['T','R','I','D','E']
+  kyverno:['T','R','I','D','E'],
+  // attacker technique components
+  lolbin:['S','T','R','D','E'],
+  loldriver:['T','I','D','E'],
+  ligolo:['S','T','I','D'],
+  sshtunnel:['S','T','I','D'],
+  chisel:['S','T','I','D'],
+  sshuttle:['S','T','I','D'],
+  socatpivot:['S','T','I','D'],
+  proxychains:['S','T','I','D'],
+  rpivot:['S','T','I','D'],
+  dnscat:['S','T','I','D'],
+  iodine:['S','T','I','D'],
+  filetransfer:['T','I','D']
 };
 
 const PASTA = [
@@ -622,27 +741,27 @@ const ATTACK = {
   'Reconnaissance':[['T1595','Active Scanning'],['T1590','Gather Victim Network Info'],['T1598','Phishing for Information'],['T1589','Gather Victim Identity Info']],
   'Resource Development':[['T1583','Acquire Infrastructure'],['T1584','Compromise Infrastructure'],['T1587','Develop Capabilities'],['T1588','Obtain Capabilities'],['T1608','Stage Capabilities'],['T1585','Establish Accounts']],
   'Initial Access':[['T1190','Exploit Public-Facing Application'],['T1133','External Remote Services'],['T1566','Phishing'],['T1078','Valid Accounts'],['T1195','Supply Chain Compromise']],
-  'Execution':[['T1059','Command & Scripting Interpreter'],['T1610','Deploy Container'],['T1204','User Execution'],['T1053','Scheduled Task/Job']],
-  'Persistence':[['T1136','Create Account'],['T1098','Account Manipulation'],['T1525','Implant Internal Image'],['T1505','Server Software Component']],
-  'Privilege Escalation':[['T1068','Exploitation for Priv. Escalation'],['T1611','Escape to Host'],['T1548','Abuse Elevation Control'],['T1078.004','Cloud Accounts']],
-  'Defense Evasion':[['T1070','Indicator Removal'],['T1562','Impair Defenses'],['T1036','Masquerading'],['T1550','Use Alternate Auth Material']],
-  'Credential Access':[['T1110','Brute Force'],['T1003','OS Credential Dumping'],['T1552','Unsecured Credentials'],['T1558','Steal/Forge Kerberos Tickets'],['T1528','Steal App Access Token'],['T1557','Adversary-in-the-Middle'],['T1539','Steal Web Session Cookie']],
+  'Execution':[['T1059','Command & Scripting Interpreter'],['T1059.001','PowerShell'],['T1059.003','Windows Command Shell'],['T1059.005','Visual Basic'],['T1047','Windows Management Instrumentation'],['T1610','Deploy Container'],['T1204','User Execution'],['T1053','Scheduled Task/Job'],['T1218','System Binary Proxy Execution'],['T1218.011','Rundll32'],['T1218.005','Mshta'],['T1218.010','Regsvr32'],['T1197','BITS Jobs'],['T1569','System Services']],
+  'Persistence':[['T1136','Create Account'],['T1098','Account Manipulation'],['T1525','Implant Internal Image'],['T1505','Server Software Component'],['T1547','Boot/Logon Autostart Execution'],['T1546','Event Triggered Execution']],
+  'Privilege Escalation':[['T1068','Exploitation for Priv. Escalation'],['T1611','Escape to Host'],['T1548','Abuse Elevation Control'],['T1078.004','Cloud Accounts'],['T1134','Access Token Manipulation'],['T1543','Create/Modify System Process']],
+  'Defense Evasion':[['T1070','Indicator Removal'],['T1562','Impair Defenses'],['T1036','Masquerading'],['T1550','Use Alternate Auth Material'],['T1218','System Binary Proxy Execution'],['T1197','BITS Jobs'],['T1140','Deobfuscate/Decode'],['T1027','Obfuscated Files'],['T1055','Process Injection'],['T1620','Reflective Code Loading'],['T1014','Rootkit']],
+  'Credential Access':[['T1110','Brute Force'],['T1003','OS Credential Dumping'],['T1552','Unsecured Credentials'],['T1558','Steal/Forge Kerberos Tickets'],['T1528','Steal App Access Token'],['T1557','Adversary-in-the-Middle'],['T1539','Steal Web Session Cookie'],['T1649','Steal or Forge Authentication Certificates'],['T1606','Forge Web Credentials']],
   'Discovery':[['T1046','Network Service Discovery'],['T1087','Account Discovery'],['T1613','Container & Resource Discovery'],['T1526','Cloud Service Discovery']],
-  'Lateral Movement':[['T1021','Remote Services'],['T1550','Use Alternate Auth Material'],['T1080','Taint Shared Content']],
+  'Lateral Movement':[['T1021','Remote Services'],['T1021.004','SSH'],['T1550','Use Alternate Auth Material'],['T1080','Taint Shared Content'],['T1570','Lateral Tool Transfer'],['T1563','Remote Service Session Hijacking'],['T1021.001','Remote Desktop Protocol']],
   'Collection':[['T1213','Data from Info Repositories'],['T1530','Data from Cloud Storage'],['T1119','Automated Collection']],
-  'Command & Control':[['T1071','Application Layer Protocol'],['T1573','Encrypted Channel'],['T1105','Ingress Tool Transfer'],['T1090','Proxy'],['T1102','Web Service'],['T1572','Protocol Tunneling'],['T1568','Dynamic Resolution'],['T1095','Non-Application Layer Protocol'],['T1219','Remote Access Software'],['T1008','Fallback Channels']],
-  'Exfiltration':[['T1041','Exfil over C2 Channel'],['T1567','Exfil over Web Service'],['T1048','Exfil over Alt Protocol']],
+  'Command & Control':[['T1071','Application Layer Protocol'],['T1071.001','Web Protocols'],['T1071.004','DNS'],['T1573','Encrypted Channel'],['T1105','Ingress Tool Transfer'],['T1090','Proxy'],['T1090.001','Internal Proxy'],['T1090.002','External Proxy'],['T1102','Web Service'],['T1572','Protocol Tunneling'],['T1568','Dynamic Resolution'],['T1095','Non-Application Layer Protocol'],['T1219','Remote Access Software'],['T1008','Fallback Channels'],['T1001','Data Obfuscation'],['T1132','Data Encoding']],
+  'Exfiltration':[['T1041','Exfil over C2 Channel'],['T1567','Exfil over Web Service'],['T1048','Exfil over Alt Protocol'],['T1048.003','Exfil over Unencrypted Protocol'],['T1011','Exfil over Other Network Medium']],
   'Impact':[['T1486','Data Encrypted for Impact'],['T1485','Data Destruction'],['T1498','Network DoS'],['T1496','Resource Hijacking']]
 };
 
 // Compact MITRE D3FEND subset (defensive tactic -> techniques)
 const D3FEND = {
-  'Harden':[['D3-MFA','Multi-factor Authentication'],['D3-CH','Credential Hardening'],['D3-ACH','Application Config Hardening'],['D3-PH','Platform Hardening']],
-  'Detect':[['D3-NTA','Network Traffic Analysis'],['D3-PA','Process Analysis'],['D3-UBA','User Behavior Analysis'],['D3-FA','File Analysis'],['D3-RTSD','Resource Access Pattern Analysis']],
-  'Isolate':[['D3-NI','Network Isolation'],['D3-EI','Execution Isolation'],['D3-BSE','Broadcast Domain Isolation'],['D3-ET','Encrypted Tunnels']],
-  'Deceive':[['D3-DUC','Decoy User Credential'],['D3-DO','Decoy Object'],['D3-DNR','Decoy Network Resource']],
-  'Evict':[['D3-AL','Account Locking'],['D3-PT','Process Termination'],['D3-CR','Credential Revoking']],
-  'Model':[['D3-AI','Asset Inventory'],['D3-NM','Network Mapping'],['D3-DAM','Data Inventory Mapping']]
+  'Harden':[['D3-MFA','Multi-factor Authentication'],['D3-CH','Credential Hardening'],['D3-ACH','Application Config Hardening'],['D3-PH','Platform Hardening'],['D3-SBV','Service Binary Verification'],['D3-SWU','Software Update'],['D3-DLIC','Driver Load Integrity Checking']],
+  'Detect':[['D3-NTA','Network Traffic Analysis'],['D3-PA','Process Analysis'],['D3-UBA','User Behavior Analysis'],['D3-FA','File Analysis'],['D3-RTSD','Resource Access Pattern Analysis'],['D3-OTF','Outbound Traffic Filtering'],['D3-PCSM','Process Command-Line Analysis'],['D3-PSA','Process Spawn Analysis'],['D3-DNSA','DNS Traffic Analysis'],['D3-NTPM','Network Traffic Protocol Monitoring']],
+  'Isolate':[['D3-NI','Network Isolation'],['D3-EI','Execution Isolation'],['D3-BSE','Broadcast Domain Isolation'],['D3-ET','Encrypted Tunnels'],['D3-ITF','Inbound Traffic Filtering'],['D3-OTF','Outbound Traffic Filtering']],
+  'Deceive':[['D3-DUC','Decoy User Credential'],['D3-DO','Decoy Object'],['D3-DNR','Decoy Network Resource'],['D3-DF','Decoy File'],['D3-DSE','Decoy Session']],
+  'Evict':[['D3-AL','Account Locking'],['D3-PT','Process Termination'],['D3-CR','Credential Revoking'],['D3-CRR','Connection Removal']],
+  'Model':[['D3-AI','Asset Inventory'],['D3-NM','Network Mapping'],['D3-DAM','Data Inventory Mapping'],['D3-AVS','Attack Vector Scoring']]
 };
 
 /* =====================================================================
@@ -697,10 +816,12 @@ const PGROUPS = [
     {label:'Storage', items:['pvc','pv','storageclass']},
     {label:'Scope', items:['namespace']}
   ]},
-  {label:'Boundaries', items:['attack','trust','privacy']},
+  {label:'Boundaries', items:['attack','trust','privacy','cloudbnd']},
   {label:'Red Team Infra', items:['redteam','grey','redirector','payload'], subs:[
     {label:'C2 Frameworks', items:['cobalt','bruteratel','sliver','havoc','arachne','adaptix','c2custom']},
-    {label:'Phishing Infra', items:['evilginx','gophish','tangled','phishingclub','phishing']}
+    {label:'Phishing Infra', items:['evilginx','gophish','tangled','phishingclub','phishing']},
+    {label:'Pivoting & Tunneling', items:['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine']},
+    {label:'Living off the Land', items:['lolbin','loldriver','filetransfer']}
   ]},
   {label:'Blue Team Defense', items:['siem','asm'], subs:[
     {label:'Endpoint (EDR/XDR)', items:['edr','crowdstrike','sentinelone','defender']},
@@ -781,10 +902,12 @@ function armTool(tool){
   document.querySelectorAll('.palette-item').forEach(el=>el.classList.toggle('armed',el.dataset.tool===tool));
   const c=COMPONENTS[tool];
   canvas.classList.toggle('connect-mode', c.kind==='edge'||c.kind==='attack');
-  if(c.kind==='edge'||c.kind==='attack') showHint(`<b>${c.label}</b>: click the <b>source</b> node, then the <b>target</b> node. Esc to cancel.`);
-  else if(c.kind==='boundary') showHint(`<b>${c.label}</b>: click on the canvas to drop the boundary, then drag/resize it to enclose assets.`);
-  else if(c.blueteam) showHint(`<b>${c.label}</b>: click a <b>node</b> to protect it 🛡️ — or click empty canvas to place it standalone.`);
-  else showHint(`<b>${c.label}</b>: click anywhere on the canvas to place it.`);
+  if(c.kind==='edge'||c.kind==='attack') showHint(`<b>${c.label}</b>: click <b>source</b> → then <b>target</b> node. Hold <b>Shift</b> to chain multiple. Esc to cancel.`);
+  else if(c.kind==='tunnel_off'||c.kind==='tunnel_def') showHint(`<b>${c.label}</b>: click <b>source</b> → <b>target</b>. Creates a glowing tunnel edge (${c.kind==='tunnel_off'?'red = offensive pivot':'blue = legitimate VPN/encrypted'}).`);
+  else if(c.kind==='boundary') showHint(`<b>${c.label}</b>: click canvas to place. Then drag edges to resize. Enclose nodes to define a trust zone.`);
+  else if(c.blueteam) showHint(`<b>${c.label}</b>: click a <b>node</b> to attach as shield 🛡️ — adds D3FEND countermeasures. Or click canvas for standalone.`);
+  else if(c.redteam) showHint(`<b>${c.label}</b>: place on canvas, then connect with attack edges. ATT&CK techniques are auto-mapped.`);
+  else showHint(`<b>${c.label}</b>: click canvas to place. Then connect edges and assign STRIDE threats in the inspector.`);
 }
 function disarm(){
   armed=null; connectFrom=null;
@@ -807,6 +930,10 @@ function initCanvas(){
       <path d="M0 0L10 5L0 10z" fill="#7dd3fc"/></marker>
     <marker id="arr-off" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
       <path d="M0 0L10 5L0 10z" fill="#ef4444"/></marker>
+    <marker id="arr-s" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M10 0L0 5L10 10z" fill="#7dd3fc"/></marker>
+    <marker id="arr-off-s" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M10 0L0 5L10 10z" fill="#ef4444"/></marker>
     <radialGradient id="ff-grad"><stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/>
       <stop offset="78%" stop-color="#38bdf8" stop-opacity="0"/><stop offset="100%" stop-color="#38bdf8" stop-opacity=".22"/></radialGradient>
     <radialGradient id="pv-grad"><stop offset="0%" stop-color="#22c55e" stop-opacity="0"/>
@@ -819,6 +946,8 @@ function initCanvas(){
       <stop offset="80%" stop-color="#6366f1" stop-opacity="0"/><stop offset="100%" stop-color="#6366f1" stop-opacity=".16"/></radialGradient>
     <radialGradient id="np-grad"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0"/>
       <stop offset="78%" stop-color="#8b5cf6" stop-opacity="0"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity=".18"/></radialGradient>
+    <radialGradient id="cl-grad"><stop offset="0%" stop-color="#7dd3fc" stop-opacity=".03"/>
+      <stop offset="60%" stop-color="#7dd3fc" stop-opacity=".03"/><stop offset="100%" stop-color="#7dd3fc" stop-opacity=".14"/></radialGradient>
     <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
       <feGaussianBlur stdDeviation="3.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
@@ -907,16 +1036,43 @@ function renderEdges(){
     const p=edgeGeom(a,b);
     const sel=selected&&selected.type==='edge'&&selected.id===e.id;
     const off=e.offensive;
+    const bi=e.bidirectional;
+    const tun=e.tunnel;
     const col=off?'var(--offense)':'var(--cyan)';
+    const mEnd=`marker-end="url(#${off?'arr-off':'arr'})"`;
+    const mStart=bi?` marker-start="url(#${off?'arr-off-s':'arr-s'})"` :'';
     const grp=document.createElementNS(SVGNS,'g'); grp.setAttribute('class','flow'+(sel?' sel':'')); grp.dataset.id=e.id;
-    grp.innerHTML=`
-      <path d="${p.d}" fill="none" stroke="transparent" stroke-width="16"/>
-      ${off?`<path d="${p.d}" fill="none" stroke="var(--offense-glow)" stroke-width="${sel?5:3.5}" opacity=".25" filter="url(#glow)"/>`:''}
-      <path class="flow-anim${off?' off':''}" d="${p.d}" fill="none"
-            stroke="${col}" stroke-width="${sel?2.6:1.8}" marker-end="url(#${off?'arr-off':'arr'})"/>
-      ${e.label?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly-8).toFixed(1)}" fill="${off?'#fca5a5':'var(--txt-1)'}">${esc(e.label)}</text>`:''}
-      ${off?`<g transform="translate(${(p.lx-11).toFixed(1)} ${(p.ly-11).toFixed(1)})"><circle cx="11" cy="11" r="11" fill="var(--offense)"/><g transform="translate(2 2) scale(.78)">${ICONS.sword}</g></g>`:''}
-    `;
+
+    if(tun){
+      // ---- TUNNEL RENDERING: thick glowing energy tube ----
+      const glowCol=off?'#ef4444':'#38bdf8';
+      const coreCol=off?'#fca5a5':'#7dd3fc';
+      const tubeCol=off?'rgba(239,68,68,.22)':'rgba(56,189,248,.18)';
+      grp.innerHTML=`
+        <path d="${p.d}" fill="none" stroke="transparent" stroke-width="28"/>
+        <path d="${p.d}" fill="none" stroke="${glowCol}" stroke-width="${sel?20:16}" opacity=".12" filter="url(#glow)" class="tunnel-glow"/>
+        <path d="${p.d}" fill="none" stroke="${tubeCol}" stroke-width="${sel?14:10}" stroke-linecap="round"/>
+        <path d="${p.d}" fill="none" stroke="${glowCol}" stroke-width="${sel?8:5}" opacity=".35" stroke-linecap="round"/>
+        <path class="tunnel-core${off?' off':''}" d="${p.d}" fill="none"
+              stroke="${coreCol}" stroke-width="${sel?3.5:2.4}" stroke-linecap="round" ${mEnd}${mStart}/>
+        ${e.label?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly-14).toFixed(1)}" fill="${off?'#fca5a5':'#7dd3fc'}">${esc(e.label)}</text>`:''}
+        <g transform="translate(${(p.lx-12).toFixed(1)} ${(p.ly-12).toFixed(1)})">
+          <circle cx="12" cy="12" r="12" fill="${off?'rgba(239,68,68,.85)':'rgba(56,189,248,.85)'}" stroke="${glowCol}" stroke-width="1.5"/>
+          <g transform="translate(3 3) scale(.75)" style="color:#fff">${ICONS.tunnel}</g>
+        </g>
+      `;
+    } else {
+      // ---- NORMAL EDGE RENDERING ----
+      grp.innerHTML=`
+        <path d="${p.d}" fill="none" stroke="transparent" stroke-width="16"/>
+        ${off?`<path d="${p.d}" fill="none" stroke="var(--offense-glow)" stroke-width="${sel?5:3.5}" opacity=".25" filter="url(#glow)"/>`:''}
+        <path class="flow-anim${off?' off':''}" d="${p.d}" fill="none"
+              stroke="${col}" stroke-width="${sel?2.6:1.8}" ${mEnd}${mStart}/>
+        ${e.label?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly-8).toFixed(1)}" fill="${off?'#fca5a5':'var(--txt-1)'}">${esc(e.label)}</text>`:''}
+        ${off&&!tun?`<g transform="translate(${(p.lx-11).toFixed(1)} ${(p.ly-11).toFixed(1)})"><circle cx="11" cy="11" r="11" fill="var(--offense)"/><g transform="translate(2 2) scale(.78)">${ICONS.sword}</g></g>`:''}
+        ${bi&&!tun?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly+(e.label?14:6)).toFixed(1)}" fill="${off?'#fca5a5':'var(--txt-2)'}" style="font-size:8px">⇄ bidirectional</text>`:''}
+      `;
+    }
     g.appendChild(grp);
   });
 }
@@ -939,6 +1095,10 @@ function renderBoundaries(){
       <g transform="translate(${b.x+12} ${b.y+10})">
         <g style="color:${col}" transform="scale(.8)">${ICONS[cfg.icon]}</g>
         <text class="bnd-label" x="26" y="13" fill="${col}">${esc(b.label)}</text>
+      </g>
+      <g class="bnd-lock" data-lockid="${b.id}" transform="translate(${b.x+b.w-22} ${b.y+b.h-22})">
+        <circle r="10" cx="10" cy="10" fill="rgba(8,8,12,.7)" stroke="${col}" stroke-width=".8" stroke-opacity=".5"/>
+        <text x="10" y="14" text-anchor="middle" style="font-size:11px;fill:${col}" >${b.locked!==false?'🔒':'🔓'}</text>
       </g>
       ${(()=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual);return b.w>=164?`<g transform="translate(${b.x+b.w-126} ${b.y+7})">
         <rect width="118" height="19" rx="9.5" fill="rgba(8,8,12,.75)" stroke="${col}" stroke-opacity=".35"/>
@@ -976,19 +1136,85 @@ function addBoundary(type,x,y){
     label:cfg.defLabel, d3fend:[], attack:[], notes:'', pii:type==='privacy'};
   state.boundaries.push(b); select('boundary',b.id); render();
   const msg={trust:'Trust boundary (force field) raised',privacy:'Data protection zone added',
-    redteam:'Red Team Infrastructure zone added ☠',grey:'Grey zone added',
+    cloudbnd:'Cloud boundary added ☁',redteam:'Red Team Infrastructure zone added ☠',grey:'Grey zone added',
     namespace:'Namespace added',netpol:'NetworkPolicy segmentation added'};
   toast(msg[type]||'Boundary added');
 }
-function addEdge(from,to,offensive){
+function addEdge(from,to,offensive,tunnel){
   if(from===to)return;
   if(state.edges.some(e=>e.from===from&&e.to===to&&e.offensive===offensive)){toast('Flow already exists');return;}
-  const e={id:uid('e'), from, to, label:'', offensive:!!offensive,
+  const e={id:uid('e'), from, to, label:'', offensive:!!offensive, bidirectional:!!tunnel, tunnel:!!tunnel,
     props:{stride:{}}, attack:[], notes:''};
   state.edges.push(e); select('edge',e.id); render();
-  toast(offensive?'Attack vector drawn ⚔':'Data flow connected');
+  toast(tunnel?(offensive?'Offensive tunnel drawn 🔴':'Secure tunnel drawn 🔵'):(offensive?'Attack vector drawn ⚔':'Data flow connected'));
 }
 const snap=v=>Math.round(v/11)*11;
+
+// Check which nodes are geometrically inside a boundary
+function nodesInside(b){
+  return state.nodes.filter(n=>n.x>=b.x && n.x<=b.x+b.w && n.y>=b.y && n.y<=b.y+b.h);
+}
+
+// Toggle lock on a boundary
+function toggleLock(b){
+  b.locked = b.locked===false ? true : (b.locked===true ? false : false);
+  render();
+  toast(b.locked!==false ? `${b.label} locked 🔒` : `${b.label} unlocked 🔓`);
+}
+
+// Fit boundary to contents (auto-resize to enclose all nodes inside + padding)
+function fitBoundaryToContents(b){
+  const inside=nodesInside(b);
+  if(!inside.length){toast('No nodes inside boundary');return;}
+  const pad=60;
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  inside.forEach(n=>{minx=Math.min(minx,n.x);miny=Math.min(miny,n.y);maxx=Math.max(maxx,n.x);maxy=Math.max(maxy,n.y);});
+  b.x=snap(minx-pad); b.y=snap(miny-pad-12);
+  b.w=snap(maxx-minx+pad*2); b.h=snap(maxy-miny+pad*2+34);
+  render(); toast('Boundary fitted to contents');
+}
+
+// Auto-arrange: force-directed-ish layout
+function autoArrange(){
+  if(!state.nodes.length){toast('Nothing to arrange');return;}
+  // Assign layers based on node roles
+  const R2=80; // spacing
+  const groups={corp:[],dmz:[],cloud:[],redteam:[],blueteam:[],pivot:[],ext:[]};
+  state.nodes.forEach(n=>{
+    const c=COMPONENTS[n.type];
+    if(!c)return groups.corp.push(n);
+    if(c.redteam && ['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine','lolbin','loldriver','filetransfer'].includes(n.type)) groups.pivot.push(n);
+    else if(c.redteam) groups.redteam.push(n);
+    else if(c.blueteam) groups.blueteam.push(n);
+    else if(n.type==='external') groups.ext.push(n);
+    else if(['cloud','azure','m365','bucket','manageddb','kms','secretsmgr','iamrole','serverless','clb'].includes(n.type) || n.type==='siem') groups.cloud.push(n);
+    else if(['firewall','waf','cdn'].includes(n.type) || n.label.toLowerCase().includes('dmz') || n.label.toLowerCase().includes('gateway')) groups.dmz.push(n);
+    else groups.corp.push(n);
+  });
+
+  // Layout each group in a grid pattern at designated regions
+  function layoutGrid(nodes,startX,startY,cols,spacing){
+    nodes.forEach((n,i)=>{
+      const col=i%cols, row=Math.floor(i/cols);
+      n.x=snap(startX+col*spacing);
+      n.y=snap(startY+row*spacing);
+    });
+  }
+
+  const sp=180; // spacing between nodes
+  layoutGrid(groups.ext, 50, 350, 1, sp);
+  layoutGrid(groups.dmz, 150, 700, 3, sp);
+  layoutGrid(groups.corp, 300, 150, 3, sp);
+  layoutGrid(groups.cloud, 1050, 150, 2, sp);
+  layoutGrid(groups.pivot, 200, 950, 3, sp);
+  layoutGrid(groups.redteam, 200, 1200, 3, sp);
+  layoutGrid(groups.blueteam, 1450, 150, 1, sp);
+
+  // Auto-resize boundaries to fit their contained nodes
+  state.boundaries.forEach(b=>fitBoundaryToContents(b));
+
+  render(); fitView(); toast('Auto-arranged layout ⊞');
+}
 
 // Apply a defensive control onto an existing node (it "acts on" that tool/entity)
 function applyControl(nodeId, toolType){
@@ -1035,7 +1261,25 @@ function expandK8s(node){
 /* =====================================================================
    SELECTION + INSPECTOR
    ===================================================================== */
-function select(type,id){selected=(type&&id)?{type,id}:null; renderNodes(); renderEdges(); renderBoundaries(); renderInspector();}
+function select(type,id){
+  selected=(type&&id)?{type,id}:null; renderNodes(); renderEdges(); renderBoundaries(); renderInspector();
+  // contextual modeling hints
+  if(!type) return;
+  if(type==='node'){
+    const n=nodeAt(id), c=COMPONENTS[n.type];
+    if(c.redteam) showHint(`<b>${n.label}</b> — connect attack edges (red) to show the kill chain. Map ATT&CK in the inspector.`);
+    else if(n.type==='ad') showHint(`<b>${n.label}</b> — consider: Kerberoasting, DCSync, GPO abuse. Check STRIDE checkboxes for threats.`);
+    else if(n.type==='store') showHint(`<b>${n.label}</b> — mark PII if it holds personal data. Add D3FEND countermeasures (encryption, access control).`);
+    else if(n.type==='firewall'||n.type==='api') showHint(`<b>${n.label}</b> — enclose in a boundary to define trust zones. Add D3FEND controls in the inspector.`);
+    else if(n.type==='k8s'||n.type==='k8s_cp') showHint(`<b>${n.label}</b> — double-click to expand into sub-components (pods, services, etc).`);
+  } else if(type==='edge'){
+    const ed=byId(state.edges,id);
+    if(!ed.offensive) showHint(`Data flow selected — double-click to toggle offensive. Use inspector to map ATT&CK techniques.`);
+    else showHint(`Attack vector selected — map ATT&CK techniques in the inspector. Toggle tunnel for pivot connections.`);
+  } else if(type==='boundary'){
+    showHint(`Boundary selected — click to grab & move, drag corners to resize. Right-click for more options.`);
+  }
+}
 
 function setInspTab(t){
   inspTab=t;
@@ -1126,10 +1370,14 @@ function inspectorEdge(e){
   return `
     <div class="field"><label>Data flow label</label><input type="text" id="f-label" value="${esc(e.label)}" placeholder="e.g. Login Requests"></div>
     <div class="field"><label>Route</label>
-      <div style="font-size:11.5px;color:var(--txt-1)">${a?esc(a.label):'?'} → ${b?esc(b.label):'?'}</div></div>
+      <div style="font-size:11.5px;color:var(--txt-1)">${a?esc(a.label):'?'} ${e.bidirectional?'⇄':'→'} ${b?esc(b.label):'?'}</div></div>
     <label class="switch ${e.offensive?'on':''}" id="f-off">
       <span>⚔️ Attack vector (offensive)</span><span class="tg"></span></label>
-    <p style="font-size:10.5px;color:var(--txt-2);margin:6px 2px 0">Offensive flows turn red, gain a sword, and map to MITRE ATT&CK.</p>
+    <label class="switch ${e.bidirectional?'on':''}" id="f-bidir">
+      <span>⇄ Bidirectional</span><span class="tg"></span></label>
+    <label class="switch ${e.tunnel?'on':''}" id="f-tunnel">
+      <span>🔵 Tunnel / Pivot</span><span class="tg"></span></label>
+    <p style="font-size:10.5px;color:var(--txt-2);margin:6px 2px 0">Tunnel edges render as glowing energy streams (red = offensive pivot, blue = legitimate VPN/encrypted).</p>
     <div class="field" style="margin-top:12px"><label>Notes</label><textarea id="f-notes" placeholder="Trust assumption, protocol…">${esc(e.notes||'')}</textarea></div>
 
     <div class="sec-title">🗡️ MITRE ATT&CK <span class="pill">${e.attack.length}</span></div>
@@ -1144,7 +1392,7 @@ function inspectorBoundary(b){
   const cfg=BND[b.type]||BND.trust;
   b.d3fend=b.d3fend||[]; b.attack=b.attack||[];
   const typeDesc={trust:'Trust Boundary — force field (D3FEND)',privacy:'Data Protection Zone — PII (GDPR)',
-    redteam:'Red Team Infrastructure — offensive perimeter (ATT&CK)',grey:'Grey Zone — disposable fronting infra (ATT&CK)'}[b.type]||cfg.label;
+    redteam:'Red Team Infrastructure — offensive perimeter (ATT&CK)',grey:'Grey Zone — disposable fronting infra (ATT&CK)',cloudbnd:'Cloud Boundary — cloud-native resources (D3FEND)'}[b.type]||cfg.label;
   let mapHtml='';
   if(cfg.mapping==='d3fend'){
     mapHtml=`<div class="sec-title">🛡️ MITRE D3FEND <span class="pill">${b.d3fend.length}</span></div>
@@ -1194,6 +1442,8 @@ function wireInspector(){
   if($('f-notes'))$('f-notes').oninput=e=>{ (sel.type==='node'?obj.props:obj).notes=e.target.value; };
   if($('f-pii'))$('f-pii').onclick=()=>{obj.props.pii=!obj.props.pii; renderInspector(); renderNodes(); renderAnalysis();};
   if($('f-off'))$('f-off').onclick=()=>{obj.offensive=!obj.offensive; renderInspector(); renderEdges(); renderAnalysis();};
+  if($('f-bidir'))$('f-bidir').onclick=()=>{obj.bidirectional=!obj.bidirectional; renderInspector(); renderEdges(); renderAnalysis();};
+  if($('f-tunnel'))$('f-tunnel').onclick=()=>{obj.tunnel=!obj.tunnel; if(obj.tunnel)obj.bidirectional=true; renderInspector(); renderEdges(); renderAnalysis();};
   if($('f-pasta'))$('f-pasta').onchange=e=>{obj.props.pasta=e.target.value;};
   document.querySelectorAll('[data-stride]').forEach(cb=>cb.onchange=e=>{
     const k=e.target.dataset.stride; obj.props.stride[k]=e.target.checked; renderNodes(); renderAnalysis();
@@ -1259,13 +1509,14 @@ function countNodeThreats(n){return Object.values(n.props.stride).filter(Boolean
 const SCORE_NORM=(x,k)=>Math.round((1-Math.exp(-x/k))*100);
 function riskLevel(r){return r<25?{l:'Low',c:'var(--ok)'}:r<50?{l:'Medium',c:'var(--warn)'}:r<75?{l:'High',c:'#fb923c'}:{l:'Critical',c:'var(--danger)'};}
 function nodesInBoundary(b){return state.nodes.filter(n=>n.x>b.x&&n.x<b.x+b.w&&n.y>b.y&&n.y<b.y+b.h);}
+function ctrlD3(ct){return ct.d3fend||(NODE_DEFAULTS[ct.type]&&NODE_DEFAULTS[ct.type].d?NODE_DEFAULTS[ct.type].d.map(([id,name])=>({id,name})):[]); }
 function scoreFrom(nodes,edges,bnd){
   const ids=new Set(nodes.map(n=>n.id));
   const off=edges.filter(e=>e.offensive&&(ids.has(e.from)||ids.has(e.to)));
   let atk=0, def=0;
   off.forEach(e=>atk+=6+3*((e.attack||[]).length));
   nodes.forEach(n=>{ atk+=2.5*((n.props.attack||[]).length)+1.5*countNodeThreats(n); if(COMPONENTS[n.type].redteam)atk+=5;
-    def+=3*((n.props.d3fend||[]).length); (n.props.controls||[]).forEach(ct=>def+=4+1.5*ct.d3fend.length); if(COMPONENTS[n.type].blueteam)def+=5; });
+    def+=3*((n.props.d3fend||[]).length); (n.props.controls||[]).forEach(ct=>def+=4+1.5*(ctrlD3(ct).length)); if(COMPONENTS[n.type].blueteam)def+=5; });
   if(bnd){ atk+=4*((bnd.attack||[]).length); def+=4*((bnd.d3fend||[]).length)+({trust:9,netpol:7,namespace:4,privacy:3}[bnd.type]||0); }
   return {atk,def,off:off.length};
 }
@@ -1282,9 +1533,9 @@ function renderAnalysis(){
   const threats=nodes.reduce((a,n)=>a+countNodeThreats(n),0);
   const offensive=edges.filter(e=>e.offensive).length;
   const piiNodes=nodes.filter(n=>n.props.pii).length;
-  const attackIds=new Set(); nodes.forEach(n=>n.props.attack.forEach(t=>attackIds.add(t.id))); edges.forEach(e=>e.attack.forEach(t=>attackIds.add(t.id)));
-  const defIds=new Set(); nodes.forEach(n=>n.props.d3fend.forEach(t=>defIds.add(t.id))); bnds.forEach(b=>(b.d3fend||[]).forEach(t=>defIds.add(t.id)));
-  nodes.forEach(n=>(n.props.controls||[]).forEach(ct=>ct.d3fend.forEach(t=>defIds.add(t.id))));
+  const attackIds=new Set(); nodes.forEach(n=>(n.props.attack||[]).forEach(t=>attackIds.add(t.id))); edges.forEach(e=>(e.attack||[]).forEach(t=>attackIds.add(t.id)));
+  const defIds=new Set(); nodes.forEach(n=>(n.props.d3fend||[]).forEach(t=>defIds.add(t.id))); bnds.forEach(b=>(b.d3fend||[]).forEach(t=>defIds.add(t.id)));
+  nodes.forEach(n=>(n.props.controls||[]).forEach(ct=>ctrlD3(ct).forEach(t=>defIds.add(t.id))));
   const appliedControls=nodes.reduce((a,n)=>a+(n.props.controls||[]).length,0);
   const trustB=bnds.filter(b=>b.type==='trust').length, pvB=bnds.filter(b=>b.type==='privacy').length;
   const rtNodes=nodes.filter(n=>COMPONENTS[n.type].redteam).length;
@@ -1331,13 +1582,24 @@ function renderAnalysis(){
     <div class="an-card"><h4>📋 Top exposed components</h4>
       ${nodes.slice().sort((a,b)=>countNodeThreats(b)-countNodeThreats(a)).slice(0,6)
         .map(n=>`<div class="an-row"><span>${esc(n.label)}</span><b style="color:${countNodeThreats(n)?'var(--danger)':'var(--txt-2)'}">${countNodeThreats(n)} threats</b></div>`).join('')||'<div style="color:var(--txt-2);font-size:11px">No components yet.</div>'}
-    </div>`;
+    </div>
+
+    ${bnds.length?`<div class="an-card"><h4>📊 Per-boundary risk</h4>
+      ${bnds.map(b=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual); return `
+        <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed var(--border)">
+          <div class="an-row"><span style="font-weight:600">${esc(b.label)}</span><b style="color:${rk.c}">${rk.l}</b></div>
+          <div style="display:flex;gap:12px;font-size:10px;color:var(--txt-2);margin-top:3px">
+            <span>⚔ ${sc.A}%</span><span>🛡 ${sc.D}%</span><span>▲ Residual ${sc.residual}%</span><span>${sc.inside} nodes</span><span>${sc.off} attack vectors</span>
+          </div>
+        </div>`;}).join('')}
+    </div>`:''}`;
 }
 
 /* =====================================================================
    POINTER INTERACTION (place / drag / connect / pan / boundary resize)
    ===================================================================== */
 let drag=null; // {mode, ...}
+let moveGrab=null; // click-to-grab, click-to-place for boundaries & nodes
 
 canvas.addEventListener('pointerdown',e=>{
   const w=screenToWorld(e.clientX,e.clientY);
@@ -1345,6 +1607,12 @@ canvas.addEventListener('pointerdown',e=>{
   const edgeEl=e.target.closest('.flow');
   const bndEl=e.target.closest('.boundary');
   const isResize=e.target.classList.contains('bnd-resize');
+
+  // --- if we're in move-grab mode, second click places the element ---
+  if(moveGrab){
+    moveGrab=null; applyPiiZones(); renderAnalysis();
+    return;
+  }
 
   // --- placement of armed tool ---
   if(armed){
@@ -1356,11 +1624,11 @@ canvas.addEventListener('pointerdown',e=>{
     }
     if(c.kind==='node'){ addNode(armed,w.x,w.y); if(!e.shiftKey)disarm(); return; }
     if(c.kind==='boundary'){ addBoundary(c.bnd,w.x,w.y); if(!e.shiftKey)disarm(); return; }
-    if(c.kind==='edge'||c.kind==='attack'){
+    if(c.kind==='edge'||c.kind==='attack'||c.kind==='tunnel_off'||c.kind==='tunnel_def'){
       if(nodeEl){
         const id=nodeEl.dataset.id;
         if(!connectFrom){connectFrom=id; showHint('Now click the <b>target</b> node.'); }
-        else{ addEdge(connectFrom,id,c.kind==='attack'); connectFrom=null; if(!e.shiftKey)disarm(); else showHint('Click next <b>source</b> node.'); }
+        else{ addEdge(connectFrom,id,c.kind==='attack'||c.kind==='tunnel_off',c.kind==='tunnel_off'||c.kind==='tunnel_def'); connectFrom=null; if(!e.shiftKey)disarm(); else showHint('Click next <b>source</b> node.'); }
       }
       return;
     }
@@ -1380,11 +1648,13 @@ canvas.addEventListener('pointerdown',e=>{
   }
   // --- select edge ---
   if(edgeEl){ select('edge',edgeEl.dataset.id); return; }
-  // --- select + drag boundary ---
+  // --- select boundary: single click selects, double-click enters move-grab ---
   if(bndEl){
     const id=bndEl.dataset.id; select('boundary',id);
     const b=byId(state.boundaries,id);
-    drag={mode:'boundary',b,dx:w.x-b.x,dy:w.y-b.y}; canvas.setPointerCapture(e.pointerId); return;
+    // standard hold-drag also works
+    const inside=b.locked!==false ? nodesInside(b) : [];
+    drag={mode:'boundary',b,dx:w.x-b.x,dy:w.y-b.y,inside,started:false,startW:{x:w.x,y:w.y}}; canvas.setPointerCapture(e.pointerId); return;
   }
   // --- pan / deselect ---
   select(null);
@@ -1395,18 +1665,47 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{
   const w=screenToWorld(e.clientX,e.clientY);
   // live temp line while connecting
-  if(armed&&connectFrom&&(COMPONENTS[armed].kind==='edge'||COMPONENTS[armed].kind==='attack')){
+  if(armed&&connectFrom&&(COMPONENTS[armed].kind==='edge'||COMPONENTS[armed].kind==='attack'||COMPONENTS[armed].kind==='tunnel_off'||COMPONENTS[armed].kind==='tunnel_def')){
     const a=nodeAt(connectFrom); if(a)drawTempLine(a.x,a.y,w.x,w.y);
+  }
+  // click-to-grab mode: boundary follows cursor without button held
+  if(moveGrab){
+    const nx=snap(w.x-moveGrab.dx), ny=snap(w.y-moveGrab.dy);
+    const ddx=nx-moveGrab.b.x, ddy=ny-moveGrab.b.y;
+    moveGrab.b.x=nx; moveGrab.b.y=ny;
+    moveGrab.inside.forEach(n=>{n.x+=ddx; n.y+=ddy;});
+    renderBoundaries(); renderNodes(); renderEdges();
+    return;
   }
   if(!drag)return;
   if(drag.mode==='node'){drag.n.x=snap(w.x-drag.dx); drag.n.y=snap(w.y-drag.dy); drag.moved=true; renderNodes(); renderEdges();}
-  else if(drag.mode==='boundary'){drag.b.x=snap(w.x-drag.dx); drag.b.y=snap(w.y-drag.dy); renderBoundaries(); applyPiiZones();}
+  else if(drag.mode==='boundary'){
+    // require 6px movement before starting drag (prevents accidental moves on click)
+    if(!drag.started){
+      if(Math.hypot(w.x-drag.startW.x, w.y-drag.startW.y)<6) return;
+      drag.started=true;
+    }
+    const nx=snap(w.x-drag.dx), ny=snap(w.y-drag.dy);
+    const ddx=nx-drag.b.x, ddy=ny-drag.b.y;
+    drag.b.x=nx; drag.b.y=ny;
+    // move contained nodes together
+    drag.inside.forEach(n=>{n.x+=ddx; n.y+=ddy;});
+    renderBoundaries(); renderNodes(); renderEdges(); applyPiiZones();
+  }
   else if(drag.mode==='resize'){drag.b.w=Math.max(80,snap(w.x-drag.b.x)); drag.b.h=Math.max(60,snap(w.y-drag.b.y)); renderBoundaries(); applyPiiZones();}
   else if(drag.mode==='pan'){view.x=drag.vx+(e.clientX-drag.sx); view.y=drag.vy+(e.clientY-drag.sy); drag.moved=true; applyView();}
 });
 
 canvas.addEventListener('pointerup',e=>{
   if(drag){
+    // If boundary was clicked without dragging → enter move-grab mode (click-to-place)
+    if(drag.mode==='boundary'&&!drag.started){
+      const w=screenToWorld(e.clientX,e.clientY);
+      moveGrab={b:drag.b, dx:w.x-drag.b.x, dy:w.y-drag.b.y, inside:drag.inside};
+      showHint('Move boundary — <b>click</b> to place.');
+      canvas.classList.remove('panning'); try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
+      drag=null; return;
+    }
     if(drag.mode==='boundary'||drag.mode==='resize'){applyPiiZones(); renderNodes(); renderAnalysis();}
     canvas.classList.remove('panning'); try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
   }
@@ -1419,6 +1718,110 @@ canvas.addEventListener('dblclick',e=>{
   if(edgeEl){const ed=byId(state.edges,edgeEl.dataset.id); ed.offensive=!ed.offensive; render(); toast(ed.offensive?'→ attack vector ⚔':'→ data flow'); return;}
   const nodeEl=e.target.closest('.node');
   if(nodeEl){const n=nodeAt(nodeEl.dataset.id); if(n&&n.type==='k8s')expandK8s(n);}
+});
+
+// lock icon click
+canvas.addEventListener('click',e=>{
+  const lockEl=e.target.closest('.bnd-lock');
+  if(lockEl){
+    const b=byId(state.boundaries,lockEl.dataset.lockid);
+    if(b) toggleLock(b);
+  }
+});
+
+// ------- RIGHT-CLICK CONTEXT MENU -------
+const ctxMenu=document.getElementById('ctx-menu');
+function hideCtx(){ctxMenu.classList.remove('show');}
+document.addEventListener('click',hideCtx);
+document.addEventListener('scroll',hideCtx);
+window.addEventListener('blur',hideCtx);
+
+function showCtxMenu(x,y,items){
+  ctxMenu.innerHTML=items.map(it=>{
+    if(it==='---')return '<div class="ctx-sep"></div>';
+    return `<div class="ctx-item${it.danger?' danger':''}" data-action="${it.action}">
+      <span>${it.icon||''} ${it.label}</span>${it.key?`<span class="ctx-key">${it.key}</span>`:''}
+    </div>`;
+  }).join('');
+  ctxMenu.style.left=x+'px'; ctxMenu.style.top=y+'px';
+  ctxMenu.classList.add('show');
+  // ensure on screen
+  const rect=ctxMenu.getBoundingClientRect();
+  if(rect.right>window.innerWidth) ctxMenu.style.left=(x-rect.width)+'px';
+  if(rect.bottom>window.innerHeight) ctxMenu.style.top=(y-rect.height)+'px';
+  ctxMenu.onclick=e=>{
+    const item=e.target.closest('.ctx-item'); if(!item)return;
+    hideCtx();
+    const act=item.dataset.action;
+    if(ctxHandlers[act]) ctxHandlers[act]();
+  };
+}
+
+const ctxHandlers={};
+
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const nodeEl=e.target.closest('.node');
+  const bndEl=e.target.closest('.boundary');
+  const edgeEl=e.target.closest('.flow');
+  const items=[];
+
+  if(nodeEl){
+    const n=nodeAt(nodeEl.dataset.id);
+    if(!n)return;
+    select('node',n.id);
+    items.push({icon:'✏️', label:'Rename', action:'rename', key:'F2'});
+    items.push({icon:'📋', label:'Duplicate', action:'duplicate'});
+    items.push('---');
+    items.push({icon:'⚔️', label:'Toggle offensive flag', action:'toggle_off'});
+    items.push('---');
+    items.push({icon:'🗑️', label:'Delete', action:'delete', danger:true, key:'Del'});
+    ctxHandlers.rename=()=>{const lbl=prompt('Rename node:',n.label); if(lbl!==null){n.label=lbl; render();}};
+    ctxHandlers.duplicate=()=>{const dn=addNodeSilent(n.type,n.x+55,n.y+55);dn.label=n.label+' (copy)';render();toast('Node duplicated');};
+    ctxHandlers.toggle_off=()=>{/* toggle attack on edges from this node */
+      state.edges.filter(ed=>ed.from===n.id||ed.to===n.id).forEach(ed=>{ed.offensive=!ed.offensive;});render();};
+    ctxHandlers.delete=()=>deleteSelected();
+  } else if(bndEl){
+    const b=byId(state.boundaries,bndEl.dataset.id);
+    if(!b)return;
+    select('boundary',b.id);
+    const locked=b.locked!==false;
+    items.push({icon:'✏️', label:'Rename', action:'rename', key:'F2'});
+    items.push({icon:locked?'🔓':'🔒', label:locked?'Unlock group':'Lock group', action:'lock'});
+    items.push({icon:'⊡', label:'Fit to contents', action:'fit'});
+    items.push({icon:'◎', label:'Select all inside', action:'selectall'});
+    items.push('---');
+    items.push({icon:'🗑️', label:'Delete boundary', action:'delete', danger:true});
+    ctxHandlers.rename=()=>{const lbl=prompt('Rename boundary:',b.label); if(lbl!==null){b.label=lbl; render();}};
+    ctxHandlers.lock=()=>toggleLock(b);
+    ctxHandlers.fit=()=>fitBoundaryToContents(b);
+    ctxHandlers.selectall=()=>{const inside=nodesInside(b); toast(`${inside.length} node(s) inside ${b.label}`);};
+    ctxHandlers.delete=()=>deleteSelected();
+  } else if(edgeEl){
+    const ed=byId(state.edges,edgeEl.dataset.id);
+    if(!ed)return;
+    select('edge',ed.id);
+    items.push({icon:'✏️', label:'Rename flow', action:'rename'});
+    items.push({icon:'⚔️', label:ed.offensive?'Make data flow':'Make attack vector', action:'toggle_off'});
+    items.push({icon:'⇄', label:ed.bidirectional?'Make unidirectional':'Make bidirectional', action:'toggle_bidir'});
+    items.push('---');
+    items.push({icon:'🗑️', label:'Delete flow', action:'delete', danger:true});
+    ctxHandlers.rename=()=>{const lbl=prompt('Flow label:',ed.label); if(lbl!==null){ed.label=lbl; render();}};
+    ctxHandlers.toggle_off=()=>{ed.offensive=!ed.offensive; render(); toast(ed.offensive?'→ attack vector ⚔':'→ data flow');};
+    ctxHandlers.toggle_bidir=()=>{ed.bidirectional=!ed.bidirectional; render(); toast(ed.bidirectional?'Bidirectional ⇄':'Unidirectional →');};
+    ctxHandlers.delete=()=>deleteSelected();
+  } else {
+    // canvas context menu
+    items.push({icon:'⊞', label:'Auto-arrange', action:'arrange'});
+    items.push({icon:'⊡', label:'Fit view', action:'fitview'});
+    items.push('---');
+    items.push({icon:'🗑️', label:'Clear canvas', action:'clear', danger:true});
+    ctxHandlers.arrange=()=>autoArrange();
+    ctxHandlers.fitview=()=>fitView();
+    ctxHandlers.clear=()=>clearCanvas();
+  }
+
+  showCtxMenu(e.clientX,e.clientY,items);
 });
 
 // drag & drop from palette
@@ -1483,7 +1886,7 @@ function deleteSelected(){
 }
 window.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
-  if(e.key==='Escape'){disarm(); closeModal(); select(null);}
+  if(e.key==='Escape'){moveGrab=null; disarm(); closeModal(); select(null);}
   if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();deleteSelected();}
 });
 
@@ -1570,23 +1973,23 @@ function buildReport(){
   state.nodes.forEach(n=>{r+=`- **${n.label}** (${COMPONENTS[n.type].label})${n.props.pii?' 🔒 PII':''}${(n.props.controls||[]).length?` 🛡️[${n.props.controls.map(ct=>ct.label).join(', ')}]`:''}${n.props.notes?` — ${n.props.notes}`:''}\n`;});
   r+=`\n## 2. Data flows\n`;
   state.edges.forEach(e=>{const a=nodeAt(e.from),b=nodeAt(e.to);
-    r+=`- ${a?a.label:'?'} → ${b?b.label:'?'}${e.label?` : ${e.label}`:''}${e.offensive?` ⚔️ **ATTACK VECTOR**`:''}`;
-    if(e.attack.length)r+=` [${e.attack.map(t=>t.id).join(', ')}]`; r+=`\n`;});
+    r+=`- ${a?a.label:'?'} ${e.bidirectional?'⇄':'→'} ${b?b.label:'?'}${e.label?` : ${e.label}`:''}${e.offensive?` ⚔️ **ATTACK VECTOR**`:''}${e.bidirectional?' ↔ **BIDIRECTIONAL**':''}`;
+    if((e.attack||[]).length)r+=` [${e.attack.map(t=>t.id).join(', ')}]`; r+=`\n`;});
   r+=`\n## 3. Boundaries & zones\n`;
   state.boundaries.forEach(b=>{const cfg=BND[b.type]||BND.trust; r+=`- **${b.label}** — ${cfg.label}`;
     if(b.d3fend&&b.d3fend.length)r+=` D3FEND[${b.d3fend.map(t=>t.id).join(', ')}]`;
     if(b.attack&&b.attack.length)r+=` ATT&CK[${b.attack.map(t=>t.id).join(', ')}]`; r+=`\n`;});
   const rtN=state.nodes.filter(n=>COMPONENTS[n.type].redteam), btN=state.nodes.filter(n=>COMPONENTS[n.type].blueteam);
-  if(rtN.length){r+=`\n### Red Team infrastructure\n`; rtN.forEach(n=>r+=`- ${n.label} (${COMPONENTS[n.type].label})${n.props.attack.length?` — ${n.props.attack.map(t=>t.id).join(', ')}`:''}\n`);}
-  if(btN.length){r+=`\n### Blue Team defenses\n`; btN.forEach(n=>r+=`- ${n.label} (${COMPONENTS[n.type].label})${n.props.d3fend.length?` — ${n.props.d3fend.map(t=>t.id).join(', ')}`:''}\n`);}
+  if(rtN.length){r+=`\n### Red Team infrastructure\n`; rtN.forEach(n=>r+=`- ${n.label} (${COMPONENTS[n.type].label})${(n.props.attack||[]).length?` — ${n.props.attack.map(t=>t.id).join(', ')}`:''}\n`);}
+  if(btN.length){r+=`\n### Blue Team defenses\n`; btN.forEach(n=>r+=`- ${n.label} (${COMPONENTS[n.type].label})${(n.props.d3fend||[]).length?` — ${n.props.d3fend.map(t=>t.id).join(', ')}`:''}\n`);}
   r+=`\n## 4. STRIDE assessment\n`;
   state.nodes.forEach(n=>{const ts=Object.entries(n.props.stride).filter(([,v])=>v).map(([k])=>k);
     if(ts.length){r+=`### ${n.label}\n`; ts.forEach(k=>{const s=STRIDE.find(x=>x.k===k);r+=`- **${s.k} ${s.name}** (${s.prop}) — mitigate: ${s.mit}\n`;});r+=`\n`;}});
   r+=`\n## 5. Offensive — MITRE ATT&CK\n`;
-  const atk=new Map(); state.nodes.forEach(n=>n.props.attack.forEach(t=>atk.set(t.id,t.name))); state.edges.forEach(e=>e.attack.forEach(t=>atk.set(t.id,t.name))); state.boundaries.forEach(b=>(b.attack||[]).forEach(t=>atk.set(t.id,t.name)));
+  const atk=new Map(); state.nodes.forEach(n=>(n.props.attack||[]).forEach(t=>atk.set(t.id,t.name))); state.edges.forEach(e=>(e.attack||[]).forEach(t=>atk.set(t.id,t.name))); state.boundaries.forEach(b=>(b.attack||[]).forEach(t=>atk.set(t.id,t.name)));
   atk.forEach((nm,id)=>r+=`- ${id} — ${nm}\n`); if(!atk.size)r+=`_None mapped._\n`;
   r+=`\n## 6. Defensive — MITRE D3FEND\n`;
-  const def=new Map(); state.nodes.forEach(n=>n.props.d3fend.forEach(t=>def.set(t.id,t.name))); state.boundaries.forEach(b=>(b.d3fend||[]).forEach(t=>def.set(t.id,t.name))); state.nodes.forEach(n=>(n.props.controls||[]).forEach(ct=>ct.d3fend.forEach(t=>def.set(t.id,t.name))));
+  const def=new Map(); state.nodes.forEach(n=>(n.props.d3fend||[]).forEach(t=>def.set(t.id,t.name))); state.boundaries.forEach(b=>(b.d3fend||[]).forEach(t=>def.set(t.id,t.name))); state.nodes.forEach(n=>(n.props.controls||[]).forEach(ct=>ctrlD3(ct).forEach(t=>def.set(t.id,t.name))));
   def.forEach((nm,id)=>r+=`- ${id} — ${nm}\n`); if(!def.size)r+=`_None mapped._\n`;
   const pii=state.nodes.filter(n=>n.props.pii);
   r+=`\n## 7. Privacy (PII)\n`;
@@ -1602,62 +2005,775 @@ function importJSON(file){const rd=new FileReader();rd.onload=()=>{try{const o=J
 function download(name,content,mime){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=name;a.click();}
 function clearCanvas(){if(state.nodes.length||state.boundaries.length){if(!confirm('Clear the entire canvas?'))return;}state={nodes:[],edges:[],boundaries:[],seq:1};select(null);render();toast('Canvas cleared');}
 
-function loadSample(){
+/* =====================================================================
+   SAMPLE LIBRARY — importable JSON scenarios
+   ===================================================================== */
+const SAMPLE_LIBRARY = [
+  {id:'ad-attack', title:'Enterprise AD Attack Chain', desc:'Phishing → LOLBins → Ligolo-ng pivot → Kerberoasting → ADCS abuse. Full kill chain with Grey Zone infrastructure.', tags:['Active Directory','Pivoting','LOLBins','ADCS']},
+  {id:'cobalt-beacon', title:'Cobalt Strike Beacon Drop', desc:'GoPhish campaign → Macro payload → Cobalt Strike Beacon on workstation. Grey Zone redirectors hide C2 traffic. Blue team shields detect & respond.', tags:['Cobalt Strike','Phishing','Grey Zone','C2']},
+  {id:'k8s-attack', title:'Kubernetes Cluster Compromise', desc:'Container escape → Node takeover → Secrets exfiltration → Lateral movement to cloud. RBAC bypass and supply chain attack.', tags:['Kubernetes','Cloud','Container Escape','RBAC']},
+  {id:'cloud-breach', title:'Cloud Identity Breach (Azure)', desc:'Stolen OAuth token → Entra ID takeover → Cross-tenant pivoting → Data exfiltration from Storage/KeyVault.', tags:['Azure','Identity','OAuth','Cloud']},
+  {id:'supply-chain', title:'Supply Chain Attack (CI/CD)', desc:'Compromised dependency → Poisoned pipeline → Artifact injection → Production deployment of backdoor.', tags:['CI/CD','Supply Chain','GitHub Actions','Docker']},
+  {id:'ransomware', title:'Ransomware (Double Extortion)', desc:'Initial access via RDP brute-force → Cobalt Strike → Disable EDR → Data exfil → Volume Shadow Copy deletion → Deploy ransomware via GPO.', tags:['Ransomware','AD','GPO','Double Extortion']}
+];
+
+function showLibrary(){
+  const overlay=document.createElement('div');
+  overlay.id='lib-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  const modal=document.createElement('div');
+  modal.style.cssText='background:var(--bg-2);border:1px solid var(--border);border-radius:14px;padding:28px 32px;max-width:680px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+  modal.innerHTML=`<h2 style="margin:0 0 6px;font-size:18px;color:var(--txt-0)">Scenario Library</h2>
+    <p style="margin:0 0 18px;font-size:12px;color:var(--txt-2)">Load a pre-built threat model scenario. Your current canvas will be replaced.</p>
+    <div id="lib-cards"></div>
+    <button id="lib-close" style="margin-top:16px;padding:8px 20px;background:var(--bg-3);color:var(--txt-1);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px">Cancel</button>`;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  document.getElementById('lib-close').onclick=()=>overlay.remove();
+
+  const cards=document.getElementById('lib-cards');
+  SAMPLE_LIBRARY.forEach(s=>{
+    const card=document.createElement('div');
+    card.style.cssText='padding:14px 16px;margin-bottom:10px;background:var(--bg-1);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s';
+    card.onmouseenter=()=>card.style.borderColor='var(--cyan)';
+    card.onmouseleave=()=>card.style.borderColor='var(--border)';
+    card.innerHTML=`<div style="font-weight:600;font-size:13.5px;color:var(--txt-0);margin-bottom:4px">${s.title}</div>
+      <div style="font-size:11.5px;color:var(--txt-2);margin-bottom:8px">${s.desc}</div>
+      <div>${s.tags.map(t=>`<span style="display:inline-block;padding:2px 8px;margin-right:4px;background:var(--bg-3);border-radius:10px;font-size:10px;color:var(--txt-1)">${t}</span>`).join('')}</div>`;
+    card.onclick=()=>{overlay.remove(); loadScenario(s.id);};
+    cards.appendChild(card);
+  });
+}
+
+function loadScenario(id){
+  const loaders={
+    'ad-attack': loadSampleAD,
+    'cobalt-beacon': loadSampleCobaltBeacon,
+    'k8s-attack': loadSampleK8s,
+    'cloud-breach': loadSampleCloud,
+    'supply-chain': loadSampleSupplyChain,
+    'ransomware': loadSampleRansomware
+  };
+  if(loaders[id]) loaders[id]();
+  else toast('Scenario not found');
+}
+
+function loadSample(){ showLibrary(); }
+
+function loadSampleAD(){
   state={nodes:[],edges:[],boundaries:[],seq:1};
   const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
-  const ext=N('external','Browser Client',120,260);
-  const lb=N('process','API Gateway',360,260);
-  const auth=N('iam','Auth / IAM',360,90,{stride:{S:true,E:true}});
-  const app=N('process','Order Service',600,260,{stride:{S:true,T:true,E:true,I:true}});
-  const db=N('store','Customer DB',840,180,{pii:true,stride:{T:true,I:true,D:true}});
-  const k8s=N('k8s','EKS Cluster',600,430);
-  const cloud=N('cloud','AWS Account',840,430);
-  Eadd(ext,lb,'HTTPS Requests');
-  const a1=Eadd(ext,lb,'Credential Stuffing',true); a1.attack=[{id:'T1110',name:'Brute Force'},{id:'T1078',name:'Valid Accounts'}];
-  Eadd(lb,auth,'Token Validation');
-  Eadd(lb,app,'Order API');
-  const a2=Eadd(app,db,'SQL Reads/Writes');
-  const a3=Eadd(ext,db,'SQL Injection',true); a3.attack=[{id:'T1190',name:'Exploit Public-Facing Application'}];
-  Eadd(app,k8s,'Pod Scheduling');
-  Eadd(k8s,cloud,'IAM Role (IRSA)');
-  // boundaries
-  const tb={id:uid('b'),type:'trust',x:300,y:30,w:560,h:480,label:'DMZ Force Field',d3fend:[{id:'D3-NTA',name:'Network Traffic Analysis'},{id:'D3-MFA',name:'Multi-factor Authentication'}],attack:[],notes:'',pii:false};
-  const pv={id:uid('b'),type:'privacy',x:780,y:120,w:200,h:140,label:'PII Zone',d3fend:[],attack:[],notes:'Customer names, emails, addresses',pii:true};
-  state.boundaries.push(tb,pv);
-  // d3fend on a node
-  auth.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-CH',name:'Credential Hardening'}];
-  db.props.d3fend=[{id:'D3-ET',name:'Encrypted Tunnels'}];
-  // defensive controls applied directly onto assets ("acting on the tool")
-  lb.props.controls=[{type:'waf',label:'WAF',d3fend:nodeDefaults('waf').d3fend}];
-  app.props.controls=[{type:'crowdstrike',label:'CrowdStrike',d3fend:nodeDefaults('crowdstrike').d3fend}];
-  db.props.controls=[{type:'wiz',label:'Wiz',d3fend:nodeDefaults('wiz').d3fend}];
 
-  // ---- Red Team infrastructure (attacker side) ----
-  const havoc=N('havoc','Havoc C2',200,700);
-  const redir=N('redirector','HTTPS Redirector',470,700);
-  const rt={id:uid('b'),type:'redteam',x:140,y:638,w:170,h:135,label:'Red Team Infrastructure',d3fend:[],attack:[{id:'T1583',name:'Acquire Infrastructure'},{id:'T1587',name:'Develop Capabilities'}],notes:'Attacker-owned VPS / C2',pii:false};
-  const gz={id:uid('b'),type:'grey',x:400,y:638,w:185,h:135,label:'Grey Zone',d3fend:[],attack:[{id:'T1584',name:'Compromise Infrastructure'},{id:'T1090',name:'Proxy'}],notes:'Disposable redirectors / CDN front',pii:false};
-  state.boundaries.push(rt,gz);
-  Eadd(ext,redir,'Beacon egress (HTTPS)',true);
-  Eadd(redir,havoc,'Forward to C2',true);
+  // ============================
+  // GREY ZONE — top-left cluster
+  // ============================
+  const ligolo=N('ligolo','Ligolo-ng Tunnel',100,260,{notes:'Reverse TUN tunnel: full subnet access to 10.0.0.0/16'});
+  const lolbin=N('lolbin','LOLBins on Workstation',280,260,{notes:'certutil, rundll32, mshta for download & exec'});
+  const redir=N('redirector','CDN Redirector',460,260,{notes:'CDN-fronted domain for C2 traffic obfuscation'});
+  const evilginx=N('evilginx','EvilGinx2 (AiTM)',640,260,{notes:'Adversary-in-the-middle: steals session tokens + MFA bypass'});
+  const chisel=N('chisel','Chisel Backup Tunnel',160,420,{notes:'HTTP tunnel fallback if Ligolo blocked'});
 
-  // ---- Blue Team defenses ----
-  const edr=N('edr','CrowdStrike EDR',1060,150);
-  const dt=N('darktrace','Darktrace NDR',1060,300);
-  const cspm=N('cspm','Wiz CNAPP/CSPM',1060,450);
-  const hard=N('hardening','ASR / Hardening',1060,600);
+  // ============================
+  // RED TEAM INFRASTRUCTURE — bottom-left
+  // ============================
+  const kali=N('vm','Kali Linux (Attacker)',140,700,{notes:'Ligolo-ng agent, Impacket, BloodHound'});
+  kali.props.attack=[{id:'T1583',name:'Acquire Infrastructure'}];
+  const sliver=N('sliver','Sliver C2',340,700);
 
-  applyPiiZones(); select(null); render(); fitView(); toast('Sample model loaded 🦝');
+  // ============================
+  // REMOTE EMPLOYEE — center, between grey and corp
+  // ============================
+  const user=N('external','Remote Employee',760,290,{notes:'Legitimate remote worker connecting via VPN'});
+
+  // ============================
+  // CORPORATE NETWORK — center-right, 3 rows
+  // Row 1: VPN GW, DC, Backup DC, Honeypot
+  // Row 2: Workstation, Intranet Portal, File Server (with PII)
+  // Row 3: Exchange, ADCS/PKI
+  // ============================
+  const vpn=N('api','VPN Gateway',900,200,{stride:{S:true,I:true}});
+  const dc=N('ad','Domain Controller',1100,200,{stride:{S:true,T:true,E:true,I:true}});
+  const dc2=N('ad','Backup DC',1300,200,{stride:{S:true,T:true,I:true}});
+  const decoy=N('deception','AD Honeypot (Decoys)',1500,200,{notes:'Fake SPNs, decoy shares, honey credentials planted in AD — alerts on any interaction'});
+
+  const ws=N('vm','Workstation (compromised)',900,400,{stride:{S:true,T:true,E:true},notes:'Domain-joined Win11 workstation — initial foothold via phishing'});
+  const webapp=N('webapp','Intranet Portal',1120,400,{stride:{S:true,T:true,I:true}});
+  const fs=N('store','File Server (SMB)',1380,400,{stride:{T:true,I:true,D:true},pii:true});
+
+  const mailsrv=N('process','Exchange Server',980,600,{stride:{S:true,T:true,I:true,R:true}});
+  const ca=N('iam','ADCS / PKI',1220,600,{stride:{S:true,T:true,E:true},notes:'Certificate Services — ESC1-ESC8 attack surface'});
+
+  // ============================
+  // CLOUD (AZURE TENANT) — far right
+  // ============================
+  const azure=N('cloud','Azure Entra ID',1720,200,{stride:{S:true,E:true}});
+  const azuresentinel=N('siem','Azure Sentinel',1900,200,{notes:'Cloud-native SIEM — ingests AD sign-in logs, MDE alerts'});
+  const m365=N('process','Microsoft 365',1810,380,{stride:{I:true}});
+
+  // ============================
+  // DMZ — bottom-center
+  // ============================
+  const fw=N('firewall','Perimeter Firewall',920,800);
+  const proxy=N('cdn','Reverse Proxy',1140,800);
+  const emailgw=N('process','Email Gateway / SEG',1360,800);
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const greyBnd={id:uid('b'),type:'grey',x:50,y:170,w:720,h:340,label:'Grey Zone (Disposable Infrastructure)',
+    d3fend:[],attack:[{id:'T1584',name:'Compromise Infrastructure'},{id:'T1090',name:'Proxy'}],notes:'Disposable redirectors + tunneling tools. Vorgelagert between attacker and target.',pii:false};
+  const rtBnd={id:uid('b'),type:'redteam',x:60,y:610,w:400,h:180,label:'Red Team Infrastructure',
+    d3fend:[],attack:[{id:'T1583',name:'Acquire Infrastructure'},{id:'T1587',name:'Develop Capabilities'}],notes:'Attacker-owned VPS',pii:false};
+  const corpBnd={id:uid('b'),type:'trust',x:830,y:110,w:770,h:580,label:'Corporate Network (10.0.0.0/16)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-NTA',name:'Network Traffic Analysis'},{id:'D3-MFA',name:'Multi-factor Authentication'}],attack:[],notes:'Internal trusted zone',pii:false};
+  const piiZone={id:uid('b'),type:'privacy',x:1310,y:340,w:150,h:130,label:'PII / HR Data',d3fend:[],attack:[],notes:'Employee PII, salary data',pii:true};
+  const cloudBnd={id:uid('b'),type:'cloudbnd',x:1660,y:110,w:340,h:350,label:'Cloud (Azure Tenant)',
+    d3fend:[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-ACH',name:'Application Config Hardening'}],attack:[],notes:'Azure AD tenant',pii:false};
+  const dmzBnd={id:uid('b'),type:'trust',x:840,y:720,w:610,h:160,label:'DMZ (172.16.0.0/24)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ITF',name:'Inbound Traffic Filtering'}],attack:[],notes:'Screened subnet',pii:false};
+  state.boundaries.push(greyBnd,rtBnd,corpBnd,piiZone,cloudBnd,dmzBnd);
+
+  // ============================
+  // LEGITIMATE / DEFENSIVE FLOWS (blue)
+  // ============================
+  Eadd(user,vpn,'VPN Connect (WireGuard)',false,true,true);
+  Eadd(vpn,dc,'RADIUS / NPS Auth');
+  const vpnTun=Eadd(vpn,ws,'WireGuard Tunnel',false,true,true);
+  vpnTun.notes='Encrypted WireGuard VPN tunnel — legitimate remote access';
+  Eadd(ws,dc,'Kerberos Auth / LDAP');
+  Eadd(ws,webapp,'HTTP/S Browse');
+  Eadd(ws,fs,'SMB File Access');
+  Eadd(webapp,dc,'LDAP Bind');
+  Eadd(dc,dc2,'AD Replication',false,true);
+  Eadd(mailsrv,dc,'Auth / LDAP');
+  Eadd(ca,dc,'Certificate Enrollment');
+  Eadd(dc,azure,'Azure AD Connect Sync',false,true);
+  Eadd(azure,m365,'SSO / OAuth');
+  Eadd(azuresentinel,azure,'Log ingestion');
+  Eadd(fw,vpn,'Allow VPN (443)');
+  Eadd(proxy,webapp,'Reverse Proxy Pass');
+  Eadd(emailgw,mailsrv,'SMTP Relay');
+
+  // ============================
+  // ATTACK CHAIN (red edges + tunnels)
+  // ============================
+
+  // Phishing via EvilGinx2
+  const a_phish=Eadd(evilginx,user,'AiTM Phishing (steal session)',true);
+  a_phish.attack=[{id:'T1566',name:'Phishing'},{id:'T1557',name:'Adversary-in-the-Middle'},{id:'T1539',name:'Steal Web Session Cookie'}];
+
+  // Malicious payload delivery
+  const a_deliver=Eadd(evilginx,ws,'Credential phish → implant delivery',true);
+  a_deliver.attack=[{id:'T1566',name:'Phishing'},{id:'T1204',name:'User Execution'}];
+
+  // LOLBin execution on workstation
+  const a_lol=Eadd(lolbin,ws,'certutil download + rundll32 exec',true);
+  a_lol.attack=[{id:'T1218',name:'System Binary Proxy Execution'},{id:'T1059',name:'Command & Scripting Interpreter'}];
+
+  // Ligolo-ng reverse tunnel
+  const a_pivot=Eadd(kali,ws,'Ligolo-ng reverse tunnel (TUN)',true,true,true);
+  a_pivot.attack=[{id:'T1572',name:'Protocol Tunneling'},{id:'T1090.001',name:'Internal Proxy'},{id:'T1573',name:'Encrypted Channel'}];
+  a_pivot.notes='Agent on Workstation → Kali gets full L3 access to 10.0.0.0/16';
+  Eadd(ligolo,kali,'Agent callback',true,true,true);
+  Eadd(ligolo,ws,'TUN interface (pivot)',true,true,true);
+
+  // Chisel backup tunnel
+  const a_chisel=Eadd(chisel,ws,'HTTP tunnel (backup)',true,true,true);
+  a_chisel.attack=[{id:'T1572',name:'Protocol Tunneling'},{id:'T1071.001',name:'Web Protocols'}];
+  Eadd(chisel,kali,'Tunnel endpoint',true,true,true);
+
+  // C2 beacon via CDN redirector
+  const a_c2a=Eadd(ws,redir,'Sliver beacon (HTTPS/443)',true,false,true);
+  a_c2a.attack=[{id:'T1071',name:'Application Layer Protocol'},{id:'T1573',name:'Encrypted Channel'}];
+  Eadd(redir,sliver,'Forward to C2',true,false,true);
+
+  // Lateral movement & privilege escalation inside corporate
+  const a_kerb=Eadd(ws,dc,'Kerberoasting (SPN enum)',true);
+  a_kerb.attack=[{id:'T1558',name:'Steal/Forge Kerberos Tickets'},{id:'T1087',name:'Account Discovery'}];
+
+  const a_lat=Eadd(ws,fs,'PsExec / SMB lateral move',true);
+  a_lat.attack=[{id:'T1021',name:'Remote Services'},{id:'T1570',name:'Lateral Tool Transfer'}];
+
+  const a_esc=Eadd(ws,ca,'ESC1 cert request (priv esc)',true);
+  a_esc.attack=[{id:'T1649',name:'Steal or Forge Authentication Certificates'}];
+
+  const a_dcsync=Eadd(ws,dc,'DCSync (replication abuse)',true);
+  a_dcsync.attack=[{id:'T1003.006',name:'DCSync'},{id:'T1550',name:'Use Alternate Auth Material'}];
+
+  // Decoy interaction triggers alert
+  const a_decoy=Eadd(ws,decoy,'Enum fake SPN (alert!)',true);
+  a_decoy.attack=[{id:'T1087',name:'Account Discovery'}];
+  a_decoy.notes='Honeypot detects enumeration — triggers SOC alert';
+
+  // ============================
+  // CONTROLS / SHIELDS
+  // ============================
+  ws.props.controls=[{type:'crowdstrike',label:'CrowdStrike Falcon EDR'}];
+  ws.props.d3fend=[{id:'D3-FCR',name:'File Content Rules'},{id:'D3-PSA',name:'Process Spawn Analysis'}];
+  dc.props.controls=[{type:'defender',label:'Defender for Identity'},{type:'hardening',label:'GPO Hardening'}];
+  dc.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-ACH',name:'Application Config Hardening'}];
+  dc2.props.controls=[{type:'hardening',label:'GPO Hardening'}];
+  dc2.props.d3fend=[{id:'D3-ACH',name:'Application Config Hardening'}];
+  fs.props.controls=[{type:'crowdstrike',label:'CrowdStrike Falcon EDR'}];
+  fw.props.d3fend=[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ITF',name:'Inbound Traffic Filtering'}];
+  decoy.props.d3fend=[{id:'D3-DEC',name:'Decoy Object'}];
+
+  applyPiiZones(); select(null); render(); fitView(); toast('Enterprise AD Attack Chain loaded');
+}
+
+function loadSampleCobaltBeacon(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+
+  // ============================
+  // GREY ZONE — top-left: redirectors + phishing infra + payload staging
+  // ============================
+  const redir1=N('redirector','HTTPS Redirector',100,200,{notes:'Apache mod_rewrite — filters Blue Team / sandbox traffic, forwards Beacon HTTPS to C2'});
+  const redir2=N('redirector','DNS Redirector',300,200,{notes:'socat DNS relay — forwards Beacon DNS to team server over DoH'});
+  const gophish=N('gophish','GoPhish Server',500,200,{notes:'Phishing campaign platform — sends macro-laced .docm via SMTP relay'});
+  const payload=N('payload','Payload Staging (S3)',300,360,{notes:'Pre-signed S3 URL hosting HTA dropper → downloads Cobalt Strike stager DLL'});
+
+  // ============================
+  // RED TEAM INFRASTRUCTURE — bottom-left
+  // ============================
+  const kali=N('vm','Operator Workstation',120,620,{notes:'Cobalt Strike client GUI — operator console'});
+  kali.props.attack=[{id:'T1583',name:'Acquire Infrastructure'}];
+  const cs=N('cobalt','Cobalt Strike Team Server',360,620,{notes:'Team server (443 + 53) — Beacon listeners: HTTPS (default) + DNS (fallback)'});
+
+  // ============================
+  // TARGET EMPLOYEE — center
+  // ============================
+  const user=N('external','Target Employee',700,280,{notes:'Finance department — high-value target for BEC, handles wire transfers'});
+
+  // ============================
+  // CORPORATE NETWORK — center-right
+  // ============================
+  const ws=N('vm','Workstation (Beacon)',880,280,{stride:{S:true,T:true,E:true},notes:'Win11 — Cobalt Strike SMB Beacon running in memory (svchost.exe)'});
+  const dc=N('ad','Domain Controller',1120,180,{stride:{S:true,T:true,E:true,I:true}});
+  const fs=N('store','File Server',1340,180,{stride:{T:true,I:true,D:true},pii:true,notes:'HR shares, salary data, board documents'});
+  const mail=N('process','Exchange Server',880,460,{stride:{S:true,T:true,I:true,R:true}});
+  const proxy_corp=N('cdn','Web Proxy (Squid)',1120,360,{notes:'Forward proxy — all HTTP/S egress goes through here'});
+  const siem=N('siem','SIEM / SOC',1340,360,{notes:'Splunk — ingests EDR telemetry, proxy logs, DNS logs'});
+
+  // ============================
+  // DMZ — bottom-center
+  // ============================
+  const fw=N('firewall','Perimeter Firewall',880,660,{notes:'Palo Alto NGFW — SSL decrypt, IPS, URL filtering'});
+  const mailgw=N('process','Email Gateway / SEG',1120,660,{notes:'Proofpoint — scans inbound mail, detonates attachments'});
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const greyBnd={id:uid('b'),type:'grey',x:40,y:110,w:580,h:330,label:'Grey Zone (Disposable Infrastructure)',
+    d3fend:[],attack:[{id:'T1584',name:'Compromise Infrastructure'},{id:'T1090',name:'Proxy'},{id:'T1102',name:'Web Service'}],
+    notes:'Disposable VPS + CDN-fronted redirectors. Burned & rotated after each op.',pii:false};
+  const rtBnd={id:uid('b'),type:'redteam',x:50,y:530,w:420,h:180,label:'Red Team Infrastructure',
+    d3fend:[],attack:[{id:'T1583',name:'Acquire Infrastructure'},{id:'T1587',name:'Develop Capabilities'}],
+    notes:'Operator-owned. Team server never touches the target directly.',pii:false};
+  const corpBnd={id:uid('b'),type:'trust',x:800,y:100,w:640,h:450,label:'Corporate Network (10.0.0.0/16)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-NTA',name:'Network Traffic Analysis'},{id:'D3-MFA',name:'Multi-factor Authentication'}],
+    attack:[],notes:'Internal trusted zone — segmented VLANs',pii:false};
+  const piiZone={id:uid('b'),type:'privacy',x:1280,y:120,w:140,h:130,label:'PII / HR Data',
+    d3fend:[],attack:[],notes:'Sensitive HR data — GDPR-relevant',pii:true};
+  const dmzBnd={id:uid('b'),type:'trust',x:810,y:580,w:400,h:150,label:'DMZ (172.16.0.0/24)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ITF',name:'Inbound Traffic Filtering'}],
+    attack:[],notes:'Screened subnet — inbound filtering',pii:false};
+  state.boundaries.push(greyBnd,rtBnd,corpBnd,piiZone,dmzBnd);
+
+  // ============================
+  // LEGITIMATE / DEFENSIVE FLOWS (blue)
+  // ============================
+  Eadd(ws,dc,'Kerberos Auth / LDAP');
+  Eadd(ws,mail,'MAPI / Outlook');
+  Eadd(ws,proxy_corp,'HTTPS via Proxy');
+  Eadd(ws,fs,'SMB File Access');
+  Eadd(mail,dc,'Auth / LDAP');
+  Eadd(proxy_corp,fw,'Egress HTTPS');
+  Eadd(siem,dc,'Event log collection');
+  Eadd(siem,proxy_corp,'Proxy log ingestion');
+  Eadd(fw,mailgw,'SMTP Inbound');
+  Eadd(mailgw,mail,'SMTP Relay (filtered)');
+
+  // ============================
+  // ATTACK CHAIN
+  // ============================
+
+  // Phase 1: Phishing campaign
+  const a_camp=Eadd(gophish,user,'Phishing email (macro .docm)',true);
+  a_camp.attack=[{id:'T1566.001',name:'Spearphishing Attachment'},{id:'T1204.002',name:'Malicious File'}];
+  a_camp.notes='GoPhish sends .docm with VBA macro to finance dept — bypasses SEG via password-protected ZIP';
+
+  const a_stage=Eadd(gophish,payload,'Host HTA dropper',true);
+  a_stage.attack=[{id:'T1608.001',name:'Upload Malware'}];
+
+  // Phase 2: Payload execution on workstation
+  const a_drop=Eadd(payload,ws,'HTA dropper → stager DLL (rundll32)',true);
+  a_drop.attack=[{id:'T1218.005',name:'Mshta'},{id:'T1218.011',name:'Rundll32'},{id:'T1059.005',name:'Visual Basic'}];
+  a_drop.notes='Macro downloads HTA from S3 → HTA runs rundll32 to sideload Beacon DLL';
+
+  // Phase 3: C2 channel — Beacon → Redirector → Team Server
+  const a_https=Eadd(ws,redir1,'Beacon HTTPS callback (443)',true,false,true);
+  a_https.attack=[{id:'T1071.001',name:'Web Protocols'},{id:'T1573.002',name:'Asymmetric Cryptography'},{id:'T1572',name:'Protocol Tunneling'}];
+  a_https.notes='Default Beacon profile — HTTPS with malleable C2 profile (jquery.js)';
+
+  const a_dns=Eadd(ws,redir2,'Beacon DNS fallback',true,false,true);
+  a_dns.attack=[{id:'T1071.004',name:'DNS'},{id:'T1573',name:'Encrypted Channel'}];
+  a_dns.notes='Fallback channel — DNS TXT queries to attacker domain, relayed via DoH';
+
+  Eadd(redir1,cs,'Forward HTTPS to team server',true,false,true);
+  Eadd(redir2,cs,'Forward DNS to team server',true,false,true);
+
+  // Phase 4: Post-exploitation inside corporate
+  const a_kerb=Eadd(ws,dc,'Kerberoasting (SPN scan)',true);
+  a_kerb.attack=[{id:'T1558.003',name:'Kerberoasting'},{id:'T1087.002',name:'Domain Account'}];
+  a_kerb.notes='Beacon → execute-assembly Rubeus kerberoast — crack SPN tickets offline';
+
+  const a_lat=Eadd(ws,fs,'SMB lateral move (PsExec)',true);
+  a_lat.attack=[{id:'T1021.002',name:'SMB/Windows Admin Shares'},{id:'T1570',name:'Lateral Tool Transfer'}];
+  a_lat.notes='Beacon → jump psexec64 to file server with cracked SVC account';
+
+  const a_exfil=Eadd(ws,proxy_corp,'Exfiltrate via HTTPS (Beacon)',true);
+  a_exfil.attack=[{id:'T1041',name:'Exfiltration Over C2 Channel'},{id:'T1560',name:'Archive Collected Data'}];
+  a_exfil.notes='download command via Beacon — data chunked through proxy as normal HTTPS';
+
+  // Operator control link
+  Eadd(kali,cs,'Operator → team server (SSH)',false,true,true);
+
+  // ============================
+  // CONTROLS / SHIELDS
+  // ============================
+  ws.props.controls=[{type:'crowdstrike',label:'CrowdStrike Falcon'}];
+  ws.props.d3fend=[{id:'D3-FCR',name:'File Content Rules'},{id:'D3-PSA',name:'Process Spawn Analysis'}];
+  dc.props.controls=[{type:'defender',label:'Defender for Identity'},{type:'hardening',label:'GPO Hardening'}];
+  dc.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-ACH',name:'Application Config Hardening'}];
+  fs.props.controls=[{type:'crowdstrike',label:'CrowdStrike Falcon'}];
+  fw.props.d3fend=[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ITF',name:'Inbound Traffic Filtering'}];
+  mailgw.props.d3fend=[{id:'D3-MA',name:'Message Analysis'},{id:'D3-FA',name:'File Analysis'}];
+  proxy_corp.props.controls=[{type:'suricata',label:'Suricata IDS'}];
+  proxy_corp.props.d3fend=[{id:'D3-NTA',name:'Network Traffic Analysis'},{id:'D3-OTF',name:'Outbound Traffic Filtering'}];
+  siem.props.d3fend=[{id:'D3-UBA',name:'User Behavior Analysis'},{id:'D3-PA',name:'Process Analysis'}];
+
+  applyPiiZones(); select(null); render(); fitView(); toast('Cobalt Strike Beacon Drop loaded');
+}
+
+function loadSampleK8s(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+
+  // ============================
+  // K8S CLUSTER (center, large boundary)
+  // ============================
+  const apiSrv=N('k8s_cp','API Server (kube-apiserver)',500,200,{stride:{S:true,T:true,E:true,I:true},notes:'Central control plane — all kubectl/API calls route here'});
+  const etcd=N('etcd','etcd (Secrets Store)',780,200,{stride:{T:true,I:true,D:true},notes:'Cluster state + all Secrets in plaintext unless encrypted at rest'});
+  const sched=N('process','kube-scheduler',500,380);
+  const ctrl=N('process','kube-controller-mgr',720,380);
+  const node1=N('k8s_node','Worker Node 1',360,560,{stride:{S:true,T:true,E:true}});
+  const node2=N('k8s_node','Worker Node 2',600,560);
+  const node3=N('k8s_node','Worker Node 3',840,560);
+  const kubelet1=N('process','kubelet',360,720,{notes:'Node agent — executes pod specs, mounts secrets'});
+  const pod_vuln=N('pod','Vulnerable App Pod',280,900,{stride:{S:true,T:true,E:true},notes:'Web app with RCE vulnerability (CVE-2024-XXXX)'});
+  const pod_priv=N('pod','Privileged DaemonSet',540,900,{stride:{E:true},notes:'Monitoring agent running as privileged — container escape target'});
+  const svc_acc=N('sa','ServiceAccount (over-permissioned)',800,900,{stride:{E:true,I:true},notes:'SA with cluster-admin — mounted in pod by default'});
+  const ingress=N('api','Ingress Controller',360,1100,{stride:{S:true}});
+  const registry=N('store','Container Registry',1060,380,{stride:{T:true,I:true},notes:'Harbor/ECR — stores container images'});
+
+  // Control plane flows
+  Eadd(apiSrv,etcd,'Read/Write state');
+  Eadd(sched,apiSrv,'Schedule pods');
+  Eadd(ctrl,apiSrv,'Reconcile state');
+  Eadd(kubelet1,apiSrv,'Report status / pull specs');
+  Eadd(node1,kubelet1,'Host');
+  Eadd(pod_vuln,kubelet1,'Managed by');
+  Eadd(pod_priv,node2,'Runs on');
+  Eadd(svc_acc,apiSrv,'Authenticate (token)');
+  Eadd(ingress,pod_vuln,'Route traffic');
+  Eadd(apiSrv,registry,'Pull images');
+
+  // ============================
+  // CLOUD / EXTERNAL
+  // ============================
+  const cloudIAM=N('cloud','Cloud IAM (AWS/GCP)',1300,200,{stride:{S:true,E:true}});
+  const s3=N('store','Cloud Storage (S3)',1300,400,{stride:{I:true,D:true},pii:true});
+  const ci=N('process','CI/CD Pipeline',1300,600,{notes:'GitHub Actions / ArgoCD — deploys to cluster'});
+  Eadd(apiSrv,cloudIAM,'IRSA / Workload Identity');
+  Eadd(ci,registry,'Push images');
+  Eadd(ci,apiSrv,'kubectl apply');
+
+  const attacker=N('external','Attacker',80,900);
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const cpBnd={id:uid('b'),type:'trust',x:390,y:100,w:520,h:360,label:'Control Plane',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-MFA',name:'Multi-factor Authentication'}],attack:[],notes:'K8s control plane components',pii:false};
+  const clusterBnd={id:uid('b'),type:'namespace',x:220,y:70,w:930,h:1100,label:'Kubernetes Cluster',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ACH',name:'Application Config Hardening'}],attack:[],notes:'EKS/GKE/AKS managed cluster',pii:false};
+  const cloudBnd={id:uid('b'),type:'cloudbnd',x:1200,y:100,w:260,h:580,label:'Cloud Provider',
+    d3fend:[{id:'D3-MFA',name:'Multi-factor Authentication'}],attack:[],notes:'AWS/GCP/Azure account',pii:false};
+  const nsBnd={id:uid('b'),type:'namespace',x:220,y:820,w:700,h:180,label:'Namespace: prod (default SA)',
+    d3fend:[],attack:[],notes:'Production namespace with overly permissive RBAC',pii:false};
+  state.boundaries.push(clusterBnd,cpBnd,cloudBnd,nsBnd);
+
+  // ============================
+  // ATTACK CHAIN
+  // ============================
+  const a1=Eadd(attacker,ingress,'Exploit RCE (CVE-2024-XXXX)',true);
+  a1.attack=[{id:'T1190',name:'Exploit Public-Facing Application'}];
+
+  const a2=Eadd(ingress,pod_vuln,'Trigger shell in pod',true);
+  a2.attack=[{id:'T1059',name:'Command & Scripting Interpreter'}];
+
+  const a3=Eadd(pod_vuln,svc_acc,'Read mounted SA token',true);
+  a3.attack=[{id:'T1528',name:'Steal Application Access Token'},{id:'T1552',name:'Unsecured Credentials'}];
+
+  const a4=Eadd(svc_acc,apiSrv,'kubectl get secrets --all-namespaces',true);
+  a4.attack=[{id:'T1552',name:'Unsecured Credentials'},{id:'T1087',name:'Account Discovery'}];
+
+  const a5=Eadd(pod_priv,node2,'Container escape (nsenter)',true);
+  a5.attack=[{id:'T1611',name:'Escape to Host'},{id:'T1068',name:'Exploitation for Priv. Escalation'}];
+
+  const a6=Eadd(node2,etcd,'Direct etcd access from node',true);
+  a6.attack=[{id:'T1552',name:'Unsecured Credentials'},{id:'T1005',name:'Data from Local System'}];
+
+  const a7=Eadd(svc_acc,cloudIAM,'Assume cloud role via IRSA',true);
+  a7.attack=[{id:'T1078',name:'Valid Accounts'},{id:'T1550',name:'Use Alternate Auth Material'}];
+
+  const a8=Eadd(cloudIAM,s3,'Exfil sensitive data',true);
+  a8.attack=[{id:'T1530',name:'Data from Cloud Storage'},{id:'T1567',name:'Exfiltration Over Web Service'}];
+
+  // Defenses
+  apiSrv.props.controls=[{type:'hardening',label:'RBAC + Admission Controller'}];
+  apiSrv.props.d3fend=[{id:'D3-ACH',name:'Application Config Hardening'},{id:'D3-MFA',name:'Multi-factor Authentication'}];
+  node1.props.controls=[{type:'crowdstrike',label:'Falcon for Containers'}];
+  pod_vuln.props.d3fend=[{id:'D3-FCR',name:'File Content Rules'}];
+
+  applyPiiZones(); select(null); render(); fitView(); toast('K8s Cluster Compromise loaded');
+}
+
+function loadSampleCloud(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+
+  // ============================
+  // AZURE TENANT
+  // ============================
+  const entra=N('cloud','Entra ID (Azure AD)',500,200,{stride:{S:true,T:true,E:true}});
+  const cond=N('iam','Conditional Access',740,200,{notes:'MFA, device compliance, location-based'});
+  const app_reg=N('api','App Registration (OAuth)',500,400,{stride:{S:true,E:true},notes:'Multi-tenant app with broad Graph permissions'});
+  const graph=N('api','Microsoft Graph API',740,400,{stride:{I:true}});
+  const keyvault=N('store','Azure Key Vault',320,580,{stride:{T:true,I:true},pii:true});
+  const storage=N('store','Storage Account (Blob)',560,580,{stride:{I:true,D:true},pii:true});
+  const vm=N('vm','Azure VM (jumpbox)',800,580,{stride:{S:true,T:true,E:true}});
+  const sentinel=N('siem','Azure Sentinel',980,200,{notes:'SIEM — detects sign-in anomalies, impossible travel'});
+
+  Eadd(entra,cond,'Enforce policy');
+  Eadd(app_reg,entra,'OAuth consent');
+  Eadd(app_reg,graph,'API calls (Graph)');
+  Eadd(graph,storage,'Data access');
+  Eadd(vm,keyvault,'Managed Identity');
+  Eadd(sentinel,entra,'Sign-in logs');
+
+  // ============================
+  // ON-PREM (federated)
+  // ============================
+  const adfs=N('ad','ADFS (on-prem)',200,820,{stride:{S:true,T:true}});
+  const dc=N('ad','Domain Controller',440,820);
+  Eadd(adfs,entra,'Federation trust',false,true);
+  Eadd(dc,adfs,'Auth');
+
+  // ============================
+  // ATTACKER
+  // ============================
+  const attacker=N('external','Attacker',80,200);
+  const phish_infra=N('evilginx','Phishing Infra',80,400);
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const azureBnd={id:uid('b'),type:'cloudbnd',x:240,y:100,w:860,h:560,label:'Azure Tenant',
+    d3fend:[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-ACH',name:'Application Config Hardening'}],attack:[],notes:'Primary Azure subscription',pii:false};
+  const onpremBnd={id:uid('b'),type:'trust',x:140,y:740,w:420,h:180,label:'On-Premises (Federated)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'}],attack:[],notes:'Legacy on-prem AD',pii:false};
+  const atkBnd={id:uid('b'),type:'redteam',x:30,y:120,w:160,h:360,label:'Attacker',
+    d3fend:[],attack:[],notes:'External threat actor',pii:false};
+  state.boundaries.push(azureBnd,onpremBnd,atkBnd);
+
+  // ============================
+  // ATTACK CHAIN
+  // ============================
+  const a1=Eadd(phish_infra,attacker,'Consent phishing link',true);
+  a1.attack=[{id:'T1566',name:'Phishing'},{id:'T1204',name:'User Execution'}];
+
+  const a2=Eadd(attacker,app_reg,'Illicit OAuth consent grant',true);
+  a2.attack=[{id:'T1550',name:'Use Alternate Auth Material'},{id:'T1528',name:'Steal Application Access Token'}];
+
+  const a3=Eadd(app_reg,graph,'Read mail, files, users',true);
+  a3.attack=[{id:'T1114',name:'Email Collection'},{id:'T1005',name:'Data from Local System'}];
+
+  const a4=Eadd(graph,storage,'Access blob data',true);
+  a4.attack=[{id:'T1530',name:'Data from Cloud Storage'}];
+
+  const a5=Eadd(attacker,vm,'Stolen creds → RDP',true);
+  a5.attack=[{id:'T1078',name:'Valid Accounts'},{id:'T1021',name:'Remote Services'}];
+
+  const a6=Eadd(vm,keyvault,'Dump secrets (Managed Identity)',true);
+  a6.attack=[{id:'T1552',name:'Unsecured Credentials'},{id:'T1555',name:'Credentials from Password Stores'}];
+
+  // Defenses
+  entra.props.controls=[{type:'defender',label:'Entra ID Protection'}];
+  entra.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'}];
+  cond.props.d3fend=[{id:'D3-ACH',name:'Application Config Hardening'}];
+  vm.props.controls=[{type:'crowdstrike',label:'CrowdStrike EDR'}];
+
+  applyPiiZones(); select(null); render(); fitView(); toast('Cloud Identity Breach loaded');
+}
+
+function loadSampleSupplyChain(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+
+  // ============================
+  // CI/CD PIPELINE
+  // ============================
+  const ghRepo=N('store','GitHub Repository',400,200,{stride:{T:true,I:true}});
+  const ghActions=N('process','GitHub Actions Runner',660,200,{stride:{S:true,T:true,E:true},notes:'Self-hosted runner — full access to secrets'});
+  const registry=N('store','Container Registry (GHCR)',920,200,{stride:{T:true,I:true}});
+  const argocd=N('process','ArgoCD (GitOps)',660,400,{notes:'Watches repo for changes, deploys to cluster'});
+  const secrets=N('store','Pipeline Secrets',400,400,{stride:{I:true},pii:true,notes:'AWS keys, deploy tokens, signing keys'});
+
+  Eadd(ghRepo,ghActions,'Trigger on push');
+  Eadd(ghActions,registry,'Build & push image');
+  Eadd(ghActions,secrets,'Load secrets');
+  Eadd(argocd,ghRepo,'Watch for changes');
+
+  // ============================
+  // CLOUD (AWS/GCP hosting the production cluster)
+  // ============================
+  const cloudIAM=N('cloud','Cloud IAM (AWS)',1200,200,{stride:{S:true,E:true}});
+  const ecr=N('store','ECR (private registry)',1200,400,{stride:{T:true,I:true}});
+  const cloudWatch=N('siem','CloudWatch / GuardDuty',1400,300,{notes:'Monitoring & anomaly detection'});
+
+  Eadd(registry,ecr,'Mirror / push images');
+  Eadd(cloudIAM,ecr,'IAM Policy');
+  Eadd(cloudWatch,cloudIAM,'Audit logs');
+
+  // ============================
+  // PRODUCTION K8S (inside cloud)
+  // ============================
+  const apiSrv=N('k8s_cp','K8s API Server',660,660);
+  const prodPod=N('pod','Production Pods',500,840,{stride:{S:true,T:true}});
+  const db=N('store','Production Database',860,840,{stride:{I:true,D:true},pii:true});
+  const users=N('external','End Users',160,840);
+
+  Eadd(argocd,apiSrv,'kubectl apply manifests');
+  Eadd(apiSrv,prodPod,'Deploy');
+  Eadd(prodPod,db,'Query data');
+  Eadd(users,prodPod,'HTTPS requests');
+  Eadd(apiSrv,ecr,'Pull images');
+
+  // ============================
+  // ATTACKER
+  // ============================
+  const attacker=N('external','Attacker',80,200);
+  const malPkg=N('process','Malicious NPM Package',80,400,{notes:'Typosquatted dependency — backdoor in postinstall'});
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const ciBnd={id:uid('b'),type:'trust',x:300,y:100,w:740,h:380,label:'CI/CD Pipeline (GitHub)',
+    d3fend:[{id:'D3-SBV',name:'Service Binary Verification'}],attack:[],notes:'Build and deploy pipeline',pii:false};
+  const cloudBnd={id:uid('b'),type:'cloudbnd',x:1100,y:100,w:420,h:380,label:'Cloud Provider (AWS)',
+    d3fend:[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-ACH',name:'Application Config Hardening'}],attack:[],notes:'AWS account hosting production',pii:false};
+  const prodBnd={id:uid('b'),type:'namespace',x:380,y:560,w:600,h:380,label:'Production Cluster (EKS)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ACH',name:'Application Config Hardening'}],attack:[],notes:'EKS production namespace',pii:false};
+  const atkBnd={id:uid('b'),type:'redteam',x:30,y:120,w:180,h:360,label:'Attacker',
+    d3fend:[],attack:[],notes:'',pii:false};
+  state.boundaries.push(ciBnd,cloudBnd,prodBnd,atkBnd);
+
+  // ============================
+  // ATTACK CHAIN
+  // ============================
+  const a1=Eadd(attacker,ghRepo,'Submit PR with malicious dep',true);
+  a1.attack=[{id:'T1195',name:'Supply Chain Compromise'},{id:'T1204',name:'User Execution'}];
+
+  const a2=Eadd(malPkg,ghActions,'Postinstall → RCE in runner',true);
+  a2.attack=[{id:'T1059',name:'Command & Scripting Interpreter'},{id:'T1195',name:'Supply Chain Compromise'}];
+
+  const a3=Eadd(ghActions,secrets,'Exfiltrate pipeline secrets',true);
+  a3.attack=[{id:'T1552',name:'Unsecured Credentials'},{id:'T1020',name:'Automated Exfiltration'}];
+
+  const a4=Eadd(ghActions,registry,'Push backdoored image',true);
+  a4.attack=[{id:'T1525',name:'Implant Internal Image'},{id:'T1195',name:'Supply Chain Compromise'}];
+
+  const a5=Eadd(registry,prodPod,'Deploy backdoor to prod',true);
+  a5.attack=[{id:'T1195',name:'Supply Chain Compromise'}];
+
+  const a6=Eadd(prodPod,db,'Exfiltrate customer data',true);
+  a6.attack=[{id:'T1005',name:'Data from Local System'},{id:'T1567',name:'Exfiltration Over Web Service'}];
+
+  const a7=Eadd(prodPod,cloudIAM,'Steal IRSA credentials',true);
+  a7.attack=[{id:'T1552',name:'Unsecured Credentials'},{id:'T1078',name:'Valid Accounts'}];
+
+  // Defenses
+  ghActions.props.controls=[{type:'hardening',label:'Runner Hardening'}];
+  registry.props.controls=[{type:'hardening',label:'Image Signing (cosign)'}];
+  registry.props.d3fend=[{id:'D3-SBV',name:'Service Binary Verification'}];
+  apiSrv.props.controls=[{type:'hardening',label:'Admission Controller (OPA)'}];
+  apiSrv.props.d3fend=[{id:'D3-ACH',name:'Application Config Hardening'}];
+
+  applyPiiZones(); select(null); render(); fitView(); toast('Supply Chain Attack loaded');
+}
+
+function loadSampleRansomware(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+
+  // ============================
+  // CORPORATE NETWORK
+  // ============================
+  const dc=N('ad','Domain Controller',560,180,{stride:{S:true,T:true,E:true,I:true},notes:'Abused for GPO deployment of ransomware payload'});
+  const dc2=N('ad','Backup DC',800,180,{stride:{S:true,T:true}});
+  const rdp_srv=N('vm','RDP Jump Server',340,180,{stride:{S:true,T:true,E:true},notes:'Internet-facing RDP — initial access via brute-force'});
+  const ws1=N('vm','Workstation 1',360,380,{stride:{S:true,T:true,E:true}});
+  const ws2=N('vm','Workstation 2',560,380);
+  const fs=N('store','File Server (critical)',800,380,{stride:{T:true,I:true,D:true},pii:true,notes:'20TB of business-critical data — exfiltrated before encryption'});
+  const backup=N('store','Backup Server (Veeam)',1020,380,{stride:{T:true,I:true,D:true},notes:'Volume Shadow Copies + Veeam repos — first target for deletion'});
+  const mailsrv=N('process','Exchange Server',560,540,{stride:{S:true,T:true,I:true}});
+  const hyperv=N('vm','Hyper-V Host',800,540,{stride:{D:true},notes:'ESXi/Hyper-V — ransomware encrypts VMDKs'});
+
+  // Flows
+  Eadd(rdp_srv,dc,'LDAP / Kerberos');
+  Eadd(ws1,dc,'Domain auth');
+  Eadd(ws2,dc,'Domain auth');
+  Eadd(dc,dc2,'AD Replication',false,true);
+  Eadd(fs,dc,'Auth');
+  Eadd(backup,dc,'Domain-joined');
+  Eadd(mailsrv,dc,'Auth');
+  Eadd(hyperv,dc,'Domain-joined');
+  Eadd(ws1,fs,'SMB access');
+  Eadd(ws2,fs,'SMB access');
+
+  // ============================
+  // DMZ
+  // ============================
+  const fw=N('firewall','Perimeter Firewall',200,780);
+  const vpn=N('api','VPN Gateway',440,780);
+  Eadd(fw,rdp_srv,'Allow RDP (3389)');
+  Eadd(vpn,dc,'RADIUS auth');
+
+  // ============================
+  // SIEM / MONITORING (Cloud)
+  // ============================
+  const sentinel=N('siem','Azure Sentinel',1300,200,{notes:'SIEM — should detect but was blinded by EDR kill'});
+  const mde=N('defender','Microsoft Defender',1300,380,{notes:'EDR — disabled via BYOVD / safe mode boot'});
+  Eadd(sentinel,dc,'Audit log ingestion');
+  Eadd(mde,ws1,'Endpoint telemetry');
+
+  // ============================
+  // ATTACKER
+  // ============================
+  const attacker=N('external','Threat Actor (RaaS)',80,180,{notes:'Ransomware-as-a-Service affiliate — LockBit/BlackCat/Play'});
+  const exfil_srv=N('store','Exfil Server (Mega/Tor)',80,500,{notes:'Data exfiltration destination before encryption'});
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const corpBnd={id:uid('b'),type:'trust',x:240,y:80,w:880,h:540,label:'Corporate Network (10.0.0.0/16)',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-NTA',name:'Network Traffic Analysis'}],attack:[],notes:'Primary blast radius',pii:false};
+  const dmzBnd={id:uid('b'),type:'trust',x:130,y:700,w:420,h:170,label:'DMZ / Perimeter',
+    d3fend:[{id:'D3-NI',name:'Network Isolation'},{id:'D3-ITF',name:'Inbound Traffic Filtering'}],attack:[],notes:'Perimeter zone',pii:false};
+  const cloudBnd={id:uid('b'),type:'cloudbnd',x:1200,y:100,w:260,h:360,label:'Security Operations',
+    d3fend:[{id:'D3-NTA',name:'Network Traffic Analysis'}],attack:[],notes:'SOC tooling',pii:false};
+  const atkBnd={id:uid('b'),type:'redteam',x:20,y:100,w:180,h:480,label:'Attacker (RaaS)',
+    d3fend:[],attack:[{id:'T1583',name:'Acquire Infrastructure'}],notes:'RaaS affiliate',pii:false};
+  state.boundaries.push(corpBnd,dmzBnd,cloudBnd,atkBnd);
+
+  // ============================
+  // ATTACK CHAIN — Ransomware Kill Chain
+  // ============================
+
+  // Phase 1: Initial Access — RDP brute-force
+  const a1=Eadd(attacker,rdp_srv,'RDP brute-force (exposed 3389)',true);
+  a1.attack=[{id:'T1110',name:'Brute Force'},{id:'T1021',name:'Remote Services'}];
+
+  // Phase 2: Cobalt Strike deployment
+  const a2=Eadd(rdp_srv,ws1,'Deploy Cobalt Strike beacon',true);
+  a2.attack=[{id:'T1059',name:'Command & Scripting Interpreter'},{id:'T1105',name:'Ingress Tool Transfer'}];
+
+  // Phase 3: Credential harvesting (Mimikatz / LSASS dump)
+  const a3=Eadd(ws1,dc,'DCSync / Mimikatz (DA creds)',true);
+  a3.attack=[{id:'T1003',name:'OS Credential Dumping'},{id:'T1558',name:'Steal/Forge Kerberos Tickets'},{id:'T1078',name:'Valid Accounts'}];
+
+  // Phase 4: Disable defenses (BYOVD / kill EDR)
+  const a4=Eadd(ws1,mde,'Kill EDR (BYOVD / safe mode)',true);
+  a4.attack=[{id:'T1562',name:'Impair Defenses'},{id:'T1014',name:'Rootkit'},{id:'T1112',name:'Modify Registry'}];
+
+  // Phase 5: Lateral movement to all systems
+  const a5=Eadd(ws1,ws2,'PsExec / WMI lateral movement',true);
+  a5.attack=[{id:'T1021',name:'Remote Services'},{id:'T1047',name:'WMI'}];
+
+  const a5b=Eadd(ws1,hyperv,'Lateral to hypervisor',true);
+  a5b.attack=[{id:'T1021',name:'Remote Services'}];
+
+  // Phase 6: Data exfiltration (double extortion)
+  const a6=Eadd(fs,exfil_srv,'Exfil 20TB via rclone/Mega',true);
+  a6.attack=[{id:'T1567',name:'Exfiltration Over Web Service'},{id:'T1048',name:'Exfiltration Over Alternative Protocol'},{id:'T1560',name:'Archive Collected Data'}];
+
+  // Phase 7: Delete backups & shadow copies
+  const a7=Eadd(ws1,backup,'Delete Veeam repos + VSS',true);
+  a7.attack=[{id:'T1490',name:'Inhibit System Recovery'},{id:'T1070',name:'Indicator Removal'}];
+  a7.notes='vssadmin delete shadows /all, wmic shadowcopy delete, Veeam backup deletion';
+
+  // Phase 8: Deploy ransomware via GPO
+  const a8=Eadd(dc,ws2,'GPO push ransomware payload',true);
+  a8.attack=[{id:'T1486',name:'Data Encrypted for Impact'},{id:'T1484',name:'Domain Policy Modification'},{id:'T1570',name:'Lateral Tool Transfer'}];
+  a8.notes='Scheduled task via GPO deploys encryptor to all domain-joined machines simultaneously';
+
+  const a8b=Eadd(dc,fs,'Encrypt file server',true);
+  a8b.attack=[{id:'T1486',name:'Data Encrypted for Impact'}];
+
+  const a8c=Eadd(dc,hyperv,'Encrypt VMDKs',true);
+  a8c.attack=[{id:'T1486',name:'Data Encrypted for Impact'}];
+
+  // Defenses (mostly failed in this scenario)
+  rdp_srv.props.controls=[{type:'hardening',label:'MFA on RDP (missing!)'}];
+  ws1.props.controls=[{type:'crowdstrike',label:'CrowdStrike (disabled)'}];
+  ws1.props.d3fend=[{id:'D3-PSA',name:'Process Spawn Analysis'}];
+  dc.props.controls=[{type:'hardening',label:'Tiered Admin (not enforced)'}];
+  dc.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'}];
+  backup.props.controls=[{type:'hardening',label:'Immutable Backups (missing!)'}];
+  backup.props.d3fend=[{id:'D3-ACH',name:'Application Config Hardening'}];
+
+  applyPiiZones(); select(null); render(); fitView(); toast('Ransomware (Double Extortion) loaded');
 }
 function addNodeSilent(type,x,y){const c=COMPONENTS[type];const dd=nodeDefaults(type);const n={id:uid('n'),type,label:c.label,x:snap(x),y:snap(y),props:{stride:{},pasta:'',attack:dd.attack,d3fend:dd.d3fend,pii:type==='store',notes:''}};state.nodes.push(n);return n;}
-function Eadd(a,b,label,off){const e={id:uid('e'),from:a.id,to:b.id,label:label||'',offensive:!!off,props:{stride:{}},attack:[],notes:''};state.edges.push(e);return e;}
+function Eadd(a,b,label,off,bidir,tun){const e={id:uid('e'),from:a.id,to:b.id,label:label||'',offensive:!!off,bidirectional:!!bidir,tunnel:!!tun,props:{stride:{}},attack:[],notes:''};state.edges.push(e);return e;}
 
 /* =====================================================================
    HELPERS / WIRING
    ===================================================================== */
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-let hintTimer;
-function showHint(html){const h=document.getElementById('hint');h.innerHTML=html;h.style.opacity='1';clearTimeout(hintTimer);hintTimer=setTimeout(()=>h.style.opacity='0',4200);}
+let hintTimer, idleTipTimer, idleTipIdx=0;
+const IDLE_TIPS=[
+  'Hold <b>Shift</b> while placing to chain multiple nodes/edges without re-selecting the tool.',
+  '<b>Double-click</b> an edge to toggle between data flow (blue) and attack vector (red).',
+  '<b>Right-click</b> on nodes, edges, or boundaries for quick actions (rename, duplicate, delete).',
+  'Drag a <b>blue team tool</b> onto an existing node to attach it as a shield (adds D3FEND mappings).',
+  'Use <b>STRIDE</b> checkboxes in the inspector to mark threats per node (Spoofing, Tampering, etc.).',
+  'Click a boundary once to <b>grab</b> it, move the mouse, then click again to <b>place</b>.',
+  '<b>Lock</b> boundaries (🔒 icon) so contained nodes move along when you relocate the zone.',
+  'Map <b>ATT&CK</b> techniques on attack edges — the report will auto-generate a technique matrix.',
+  'Add <b>D3FEND</b> countermeasures on nodes & boundaries to calculate residual risk scores.',
+  'Use <b>tunnel edges</b> (glow) for VPN/pivot connections. Toggle in inspector or use palette items.',
+  'The <b>⊞ Arrange</b> button auto-layouts nodes by role (corp/dmz/cloud/redteam).',
+  'Press <b>Delete</b> or <b>Backspace</b> to remove the selected element.',
+  '<b>Export</b> your threat model as JSON to share with your team or import into other tools.',
+  'Check the <b>Analysis</b> tab to see per-boundary attack/defense scores and residual risk.'
+];
+function showHint(html){const h=document.getElementById('hint');h.innerHTML=html;h.style.opacity='1';clearTimeout(hintTimer);hintTimer=setTimeout(()=>h.style.opacity='0',5500); resetIdleTips();}
+function resetIdleTips(){clearInterval(idleTipTimer); idleTipTimer=setInterval(()=>{if(!armed&&!selected&&!drag&&!moveGrab){const h=document.getElementById('hint');h.innerHTML=IDLE_TIPS[idleTipIdx%IDLE_TIPS.length];h.style.opacity='1';clearTimeout(hintTimer);hintTimer=setTimeout(()=>h.style.opacity='0',5500);idleTipIdx++;}},18000);}
+resetIdleTips();
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
 
 document.querySelectorAll('.insp-tabs button').forEach(b=>b.onclick=()=>setInspTab(b.dataset.itab));
@@ -1671,9 +2787,352 @@ document.getElementById('btn-import').onclick=()=>document.getElementById('file-
 document.getElementById('file-input').onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0]);e.target.value='';};
 
 /* =====================================================================
+   HELP PANEL
+   ===================================================================== */
+const HELP_CONTENT={
+tutorial:`
+<h3>Getting Started</h3>
+<p>PurpleSkjaldborg is a <b>purple-team threat modeling</b> tool that lets you design attack/defense scenarios on a visual canvas. It combines <b>STRIDE</b>, <b>PASTA</b>, <b>MITRE ATT&CK</b>, and <b>MITRE D3FEND</b> into a single workflow.</p>
+<div class="hl"><p>The name "Skjaldborg" means <em>shield wall</em> in Old Norse — a formation where defenders interlock shields to protect against attackers. This tool helps you build that digital shield wall.</p></div>
+
+<h3>Core Concepts</h3>
+<div class="two-col">
+  <div class="card"><h4><span style="color:var(--offense)">&#9876;</span> Red Team (Offense)</h4>
+    <p>Attacker infrastructure: C2 frameworks (Cobalt Strike, Sliver, Havoc), phishing (EvilGinx2, GoPhish), pivoting tools (Ligolo-ng, Chisel, SSH tunnels), and living-off-the-land binaries (LOLBins). Pre-mapped to ATT&CK techniques.</p></div>
+  <div class="card"><h4><span style="color:var(--trust)">&#128737;</span> Blue Team (Defense)</h4>
+    <p>Defensive controls: EDR/XDR (CrowdStrike, Defender), NDR (Darktrace, Vectra), network filtering (pfSense, Suricata), cloud security (Prisma, CASB), and hardening (ASR, Kyverno). Mapped to D3FEND countermeasures.</p></div>
+  <div class="card"><h4>&#128194; Assets &amp; Infrastructure</h4>
+    <p>What you're protecting: Active Directory, Kubernetes clusters, cloud workloads (AWS/Azure/GCP), data stores, VMs, Docker containers, IAM, and network components.</p></div>
+  <div class="card"><h4>&#128736; Boundaries &amp; Zones</h4>
+    <p>Trust boundaries segment your architecture: Corporate perimeter, DMZ, Cloud boundary, PII zones, and Grey Zones (attacker staging). Boundaries can be locked so nodes move with them.</p></div>
+</div>
+
+<h3>Placing Nodes</h3>
+<ul>
+  <li><b>Click</b> a component in the left toolbox palette, then <b>click the canvas</b> to place it.</li>
+  <li>Hold <span class="kb">Shift</span> while clicking to <b>keep the tool armed</b> and place multiple nodes without re-selecting.</li>
+  <li>Press <span class="kb">Esc</span> to cancel the armed tool.</li>
+  <li>Blue team tools can be placed on <b>existing nodes</b> to attach as a shield (shows force ring + D3FEND coverage), or placed on empty canvas as standalone.</li>
+</ul>
+
+<h3>Drawing Edges (Data Flows &amp; Attack Vectors)</h3>
+<ul>
+  <li>Select the <b>Data Flow</b> tool from the palette, then click a <b>source node</b> followed by a <b>target node</b>.</li>
+  <li><b>Double-click</b> any edge to toggle it between a normal data flow (blue) and an attack vector (red).</li>
+  <li>In the edge inspector you can toggle: <b>offensive</b> (red), <b>bidirectional</b> (arrows on both ends), and <b>tunnel</b> (animated glow).</li>
+  <li>Tunnel edges glow <span style="color:var(--offense)">red</span> for offensive pivots or <span style="color:var(--trust)">blue</span> for defensive VPN/encrypted channels.</li>
+</ul>
+
+<h3>Blue Team Shields</h3>
+<div class="hl"><p>When you arm a blue team tool and click <b>on</b> a node, the tool is attached as a <b>control</b> (shield icon). It does NOT create a separate node — instead it adds D3FEND countermeasures to the protected asset. Click empty canvas to place it standalone.</p></div>
+
+<h3>Boundaries</h3>
+<ul>
+  <li>Arm a boundary tool, then <b>click</b> the top-left corner and <b>click again</b> at the bottom-right to draw it.</li>
+  <li><b>Click</b> a boundary to grab it, <b>move</b> the mouse, <b>click again</b> to place (not drag). Press <span class="kb">Esc</span> to cancel.</li>
+  <li>When a boundary is <b>locked</b> (default), moving it also moves all contained nodes.</li>
+  <li>Right-click a boundary for options: rename, fit-to-contents, lock/unlock, delete.</li>
+</ul>
+
+<h3>Context Menu</h3>
+<p>Right-click on any element (node, edge, boundary) to access quick actions:</p>
+<ul>
+  <li><b>Nodes:</b> Rename, Duplicate, Toggle Offensive, Delete</li>
+  <li><b>Edges:</b> Rename, Toggle Attack Vector, Toggle Bidirectional, Toggle Tunnel, Delete</li>
+  <li><b>Boundaries:</b> Rename, Fit to Contents, Lock/Unlock, Delete</li>
+  <li><b>Canvas:</b> Paste, Select All, Arrange</li>
+</ul>
+
+<h3>Inspector Panel</h3>
+<p>Click any element to open its <b>inspector</b> on the right. Tabs include:</p>
+<ul>
+  <li><b>Props:</b> Label, notes, PII flag, offensive toggle, attached controls (shields)</li>
+  <li><b>STRIDE:</b> Check which STRIDE threats apply to this element</li>
+  <li><b>ATT&CK:</b> Assign MITRE ATT&CK technique IDs (auto-populated for Red Team nodes)</li>
+  <li><b>D3FEND:</b> Assign countermeasure IDs (auto-populated for Blue Team controls)</li>
+  <li><b>Analysis:</b> View per-boundary attack/defense scores and residual risk</li>
+</ul>
+`,
+
+metamodels:`
+<h3>Threat Modeling Frameworks</h3>
+<p>PurpleSkjaldborg integrates four industry-standard frameworks into a unified canvas workflow.</p>
+
+<h3>STRIDE</h3>
+<p>Categorizes threats by the security property they violate. Each element type (External Entity, Process, Data Store, Data Flow) is susceptible to specific STRIDE categories:</p>
+<table>
+  <thead><tr><th>Category</th><th>Violates</th><th>Mitigation Direction</th><th>Applies To</th></tr></thead>
+  <tbody>
+    <tr><td><b>S</b>poofing</td><td>Authentication</td><td>Strong identity verification</td><td>External Entity, Process</td></tr>
+    <tr><td><b>T</b>ampering</td><td>Integrity</td><td>Integrity checks, signing</td><td>Process, Data Store, Data Flow</td></tr>
+    <tr><td><b>R</b>epudiation</td><td>Non-repudiation</td><td>Audit logging, signatures</td><td>External Entity, Process</td></tr>
+    <tr><td><b>I</b>nformation Disclosure</td><td>Confidentiality</td><td>Encryption, access control</td><td>Process, Data Store, Data Flow</td></tr>
+    <tr><td><b>D</b>enial of Service</td><td>Availability</td><td>Rate limiting, redundancy</td><td>Process, Data Store, Data Flow</td></tr>
+    <tr><td><b>E</b>levation of Privilege</td><td>Authorization</td><td>Least privilege, sandboxing</td><td>Process</td></tr>
+  </tbody>
+</table>
+<p>Use the STRIDE checkboxes in the inspector to mark which threats apply to each node. Click the <b>STRIDE</b> toolbar button for the full matrix view.</p>
+
+<h3>PASTA (Process for Attack Simulation &amp; Threat Analysis)</h3>
+<p>A risk-centric, 7-stage methodology. Each stage maps to Skjaldborg constructs:</p>
+<table>
+  <thead><tr><th>#</th><th>Stage</th><th>Skjaldborg Mapping</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Define Objectives</td><td>Scope &rarr; boundaries + zone labels</td></tr>
+    <tr><td>2</td><td>Define Technical Scope</td><td>Place nodes for all assets &amp; infra</td></tr>
+    <tr><td>3</td><td>Application Decomposition</td><td>Draw data flows between components</td></tr>
+    <tr><td>4</td><td>Threat Analysis</td><td>Mark STRIDE categories + add notes</td></tr>
+    <tr><td>5</td><td>Vulnerability Analysis</td><td>Map ATT&CK techniques to attack edges</td></tr>
+    <tr><td>6</td><td>Attack Modeling</td><td>Red team infra + offensive tunnels + chains</td></tr>
+    <tr><td>7</td><td>Risk &amp; Impact</td><td>D3FEND countermeasures + residual risk score</td></tr>
+  </tbody>
+</table>
+
+<h3>MITRE ATT&CK</h3>
+<p>Maps adversary <b>tactics, techniques, and procedures</b> (TTPs) to offensive elements. Pre-populated for Red Team nodes:</p>
+<div class="two-col">
+  <div class="card"><h4>Tactics Coverage</h4>
+    <p>Initial Access, Execution, Persistence, Privilege Escalation, Defense Evasion, Credential Access, Discovery, Lateral Movement, Collection, Exfiltration, Command &amp; Control, Impact</p></div>
+  <div class="card"><h4>Auto-Mapped Examples</h4>
+    <p><code>T1566</code> Phishing (EvilGinx2)<br><code>T1071</code> Application Layer Protocol (C2)<br><code>T1572</code> Protocol Tunneling (Ligolo-ng)<br><code>T1059</code> Command &amp; Scripting (LOLBins)<br><code>T1003</code> OS Credential Dumping (DCSync)</p></div>
+</div>
+<p>Assign ATT&CK IDs via the inspector's ATT&CK tab, or they auto-populate based on node type.</p>
+
+<h3>MITRE D3FEND</h3>
+<p>Maps <b>defensive countermeasures</b> to blue team controls. D3FEND techniques are auto-attached when you shield a node:</p>
+<div class="two-col">
+  <div class="card"><h4>Countermeasure Categories</h4>
+    <p>Network Isolation, File Analysis, Process Analysis, Credential Hardening, Application Hardening, Message Analysis, Platform Monitoring, User Behavior Analysis</p></div>
+  <div class="card"><h4>Auto-Mapped Examples</h4>
+    <p><code>D3-NI</code> Network Isolation (pfSense)<br><code>D3-FA</code> File Analysis (CrowdStrike)<br><code>D3-PA</code> Process Analysis (Sysmon)<br><code>D3-CH</code> Credential Hardening (MFA)<br><code>D3-PM</code> Platform Monitoring (Darktrace)</p></div>
+</div>
+
+<h3>Risk Scoring</h3>
+<p>The Analysis tab calculates <b>residual risk</b> per boundary:</p>
+<ul>
+  <li><b>Attack Score:</b> Sum of ATT&CK techniques on offensive edges entering the boundary</li>
+  <li><b>Defense Score:</b> Sum of D3FEND countermeasures on nodes/controls within the boundary</li>
+  <li><b>Residual Risk:</b> Attack minus Defense — positive means under-defended, negative means well-covered</li>
+</ul>
+
+<h3>Further Reading</h3>
+<div class="hl"><p>For a deep-dive into threat modeling culture, STRIDE/PASTA theory, and how these frameworks fit into modern engineering workflows, see:<br><a href="https://benjitrapp.github.io/cultures/2022-06-11-threat-modeling/" target="_blank" rel="noopener" style="color:var(--accent-hi)">benjitrapp.github.io &mdash; Threat Modeling (Culture &amp; Practice)</a></p></div>
+`,
+
+workflow:`
+<h3>Recommended Workflow</h3>
+<p>Follow this step-by-step process to build a complete threat model:</p>
+
+<h3>Step 1: Define the Scope</h3>
+<ul>
+  <li>Place <b>boundaries</b> for your architecture zones (Corporate, DMZ, Cloud, etc.)</li>
+  <li>Add a <b>PII zone</b> (green) if you have GDPR/privacy-sensitive assets</li>
+  <li>Consider adding a <b>Grey Zone</b> for attacker staging infrastructure</li>
+</ul>
+
+<h3>Step 2: Place Assets</h3>
+<ul>
+  <li>Drop infrastructure nodes: AD, DNS, web servers, databases, K8s clusters</li>
+  <li>Place them <b>inside</b> their respective boundaries</li>
+  <li>Label each node clearly (e.g., "DC01", "prod-api", "customer-db")</li>
+  <li>Mark sensitive stores with the <b>PII</b> flag</li>
+</ul>
+
+<h3>Step 3: Draw Data Flows</h3>
+<ul>
+  <li>Connect nodes with data flow edges showing how data moves</li>
+  <li>Label flows with protocol/data type (e.g., "LDAP auth", "TLS 443", "SQL queries")</li>
+  <li>Mark flows that cross boundaries — these are key trust boundary crossings</li>
+</ul>
+
+<h3>Step 4: Model the Attacker</h3>
+<ul>
+  <li>Place Red Team infrastructure (C2 server, phishing platform)</li>
+  <li>Draw <b>attack vectors</b> (red edges) showing the attack path</li>
+  <li>Use <b>tunnel edges</b> for pivot/C2 channels (animated glow)</li>
+  <li>Map <b>ATT&CK techniques</b> to each attack edge</li>
+  <li>Add <b>LOLBin</b> / <b>pivot</b> nodes at each lateral movement point</li>
+</ul>
+
+<h3>Step 5: Deploy Defenses</h3>
+<ul>
+  <li>Arm Blue Team tools and <b>click on assets</b> to shield them</li>
+  <li>Each shield adds D3FEND countermeasures to that node</li>
+  <li>Add defensive boundaries (trust boundaries with D3FEND mappings)</li>
+  <li>Consider <b>defense-in-depth</b>: multiple shields per critical asset</li>
+</ul>
+
+<h3>Step 6: Analyze &amp; Report</h3>
+<ul>
+  <li>Open the <b>Analysis</b> tab to see per-boundary risk scores</li>
+  <li>Run the STRIDE matrix to check coverage</li>
+  <li>Click <b>Report</b> to generate a full threat model document</li>
+  <li>Export to share with your team</li>
+</ul>
+
+<div class="hl"><p><b>Pro tip:</b> Load a <b>Sample Scenario</b> to see a complete workflow example, then modify it for your environment.</p></div>
+
+<h3>Sample Scenarios</h3>
+<p>The built-in library includes 5 pre-built scenarios you can load and modify:</p>
+<table>
+  <thead><tr><th>Scenario</th><th>Focus</th><th>Key Techniques</th></tr></thead>
+  <tbody>
+    <tr><td><b>AD Attack Chain</b></td><td>On-prem Active Directory</td><td>Kerberoasting, DCSync, Golden Ticket</td></tr>
+    <tr><td><b>K8s Cluster Compromise</b></td><td>Container orchestration</td><td>Pod escape, RBAC abuse, etcd dump</td></tr>
+    <tr><td><b>Cloud Identity Breach</b></td><td>Azure AD / Entra ID</td><td>Token theft, consent phishing, MFA bypass</td></tr>
+    <tr><td><b>Supply Chain Attack</b></td><td>CI/CD + Cloud</td><td>Pipeline poisoning, IRSA abuse, registry tampering</td></tr>
+    <tr><td><b>Ransomware (Double Extortion)</b></td><td>Full kill chain</td><td>RDP brute → Cobalt Strike → DCSync → data exfil → GPO deploy</td></tr>
+  </tbody>
+</table>
+`,
+
+shortcuts:`
+<h3>Keyboard Shortcuts</h3>
+<table>
+  <thead><tr><th>Key</th><th>Action</th><th>Context</th></tr></thead>
+  <tbody>
+    <tr><td><span class="kb">Delete</span> / <span class="kb">Backspace</span></td><td>Delete selected element</td><td>Any selection</td></tr>
+    <tr><td><span class="kb">Esc</span></td><td>Cancel armed tool / deselect</td><td>Any time</td></tr>
+    <tr><td><span class="kb">Shift</span> + click</td><td>Keep tool armed after placing</td><td>While placing nodes/edges</td></tr>
+    <tr><td><span class="kb">?</span></td><td>Toggle Help panel</td><td>Any time</td></tr>
+  </tbody>
+</table>
+
+<h3>Mouse Interactions</h3>
+<table>
+  <thead><tr><th>Action</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td><b>Click</b> node/edge/boundary</td><td>Select it (opens inspector)</td></tr>
+    <tr><td><b>Double-click</b> edge</td><td>Toggle attack vector (offensive)</td></tr>
+    <tr><td><b>Right-click</b> element</td><td>Context menu (rename, delete, etc.)</td></tr>
+    <tr><td><b>Drag</b> node</td><td>Move node on canvas</td></tr>
+    <tr><td><b>Click</b> boundary → move → <b>click</b></td><td>Relocate boundary (click-to-grab, click-to-place)</td></tr>
+    <tr><td><b>Drag</b> canvas background</td><td>Pan the viewport</td></tr>
+    <tr><td><b>Scroll wheel</b></td><td>Zoom in/out</td></tr>
+    <tr><td><b>Blue tool</b> → click on node</td><td>Attach as shield (adds D3FEND)</td></tr>
+    <tr><td><b>Blue tool</b> → click empty canvas</td><td>Place standalone defense node</td></tr>
+  </tbody>
+</table>
+
+<h3>Toolbar Buttons</h3>
+<table>
+  <thead><tr><th>Button</th><th>Function</th></tr></thead>
+  <tbody>
+    <tr><td><b>STRIDE</b></td><td>Show STRIDE threat/element matrix</td></tr>
+    <tr><td><b>PASTA</b></td><td>Show PASTA 7-stage methodology</td></tr>
+    <tr><td><b>Legend</b></td><td>Color key + element descriptions</td></tr>
+    <tr><td><b>Report</b></td><td>Generate Markdown threat model report</td></tr>
+    <tr><td><b>Arrange</b></td><td>Auto-layout nodes by role (corp/dmz/cloud/redteam)</td></tr>
+    <tr><td><b>Import</b></td><td>Load a previously exported JSON file</td></tr>
+    <tr><td><b>Save</b></td><td>Export current model as JSON</td></tr>
+    <tr><td><b>Sample</b></td><td>Open the sample scenario library</td></tr>
+    <tr><td><b>Help</b></td><td>Open this help panel</td></tr>
+  </tbody>
+</table>
+
+<h3>Inspector Tabs</h3>
+<table>
+  <thead><tr><th>Tab</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr><td><b>Props</b></td><td>Element label, notes, PII flag, offensive toggle, controls/shields</td></tr>
+    <tr><td><b>STRIDE</b></td><td>Checkboxes for each STRIDE category applicable to this element</td></tr>
+    <tr><td><b>ATT&CK</b></td><td>MITRE ATT&CK technique IDs assigned to this element</td></tr>
+    <tr><td><b>D3FEND</b></td><td>MITRE D3FEND countermeasure IDs</td></tr>
+    <tr><td><b>Analysis</b></td><td>Per-boundary attack/defense scoring, residual risk</td></tr>
+  </tbody>
+</table>
+`,
+
+about:`
+<h3>About PurpleSkjaldborg</h3>
+<p><b>PurpleSkjaldborg</b> is a browser-based, zero-dependency threat modeling tool designed for purple teams, security architects, and penetration testers who want to visualize attack paths alongside defensive controls.</p>
+
+<div class="two-col">
+  <div class="card"><h4>Design Principles</h4>
+    <ul>
+      <li>Single HTML file — no build step, no server, works offline</li>
+      <li>Purple team focus: offense <em>and</em> defense in one view</li>
+      <li>Framework integration: STRIDE + PASTA + ATT&CK + D3FEND</li>
+      <li>Visual-first: animated tunnels, force-field boundaries, shield badges</li>
+      <li>Export-ready: JSON persistence + Markdown reports</li>
+    </ul>
+  </div>
+  <div class="card"><h4>What Makes It Different</h4>
+    <ul>
+      <li>Attack paths and defenses modeled <em>together</em> on one canvas</li>
+      <li>Blue team tools as shields <em>on</em> assets, not floating boxes</li>
+      <li>Residual risk scoring: attack surface minus countermeasures</li>
+      <li>Pre-built Red/Blue component libraries with auto-ATT&CK/D3FEND</li>
+      <li>Sample kill chains you can adapt for your environment</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Architecture</h3>
+<ul>
+  <li><b>Rendering:</b> SVG canvas with layers (boundaries → edges → nodes)</li>
+  <li><b>State:</b> In-memory JSON (nodes, edges, boundaries). Export/import for persistence.</li>
+  <li><b>Components:</b> Each node type has an icon, role, default ATT&CK/D3FEND mappings, and STRIDE applicability.</li>
+  <li><b>Edges:</b> Data flows (blue) or attack vectors (red), with optional tunnel animation and bidirectional markers.</li>
+  <li><b>Boundaries:</b> Rectangular zones with force-field styling. Types: trust (blue), privacy (green), cloud (gradient), network (dashed).</li>
+</ul>
+
+<h3>Color Key</h3>
+<div style="margin:10px 0">
+  <div class="color-key"><span class="dot" style="background:var(--offense)"></span> <b>Red</b> — Offensive / attack vectors / Red Team infrastructure</div>
+  <div class="color-key"><span class="dot" style="background:var(--trust)"></span> <b>Cyan/Blue</b> — Defensive / trust boundaries / Blue Team controls</div>
+  <div class="color-key"><span class="dot" style="background:var(--privacy)"></span> <b>Green</b> — PII/Privacy zones / GDPR-relevant data</div>
+  <div class="color-key"><span class="dot" style="background:var(--accent)"></span> <b>Purple</b> — UI accents / selected elements / Skjaldborg brand</div>
+  <div class="color-key"><span class="dot" style="background:#888"></span> <b>Grey</b> — Neutral data flows / infrastructure / Grey Zone staging</div>
+</div>
+
+<h3>Tips &amp; Best Practices</h3>
+<ul>
+  <li>Start with boundaries to define your architecture before placing nodes</li>
+  <li>Use <b>Auto Arrange</b> after loading a sample to get a clean layout</li>
+  <li>Map ATT&CK on attack edges for the report to auto-generate a technique matrix</li>
+  <li>Add D3FEND countermeasures on nodes/boundaries to calculate residual risk</li>
+  <li>Use tunnel edges for VPN/pivot connections to visually distinguish them</li>
+  <li>Export frequently — the tool runs entirely in-browser with no server-side save</li>
+  <li>The report generates Markdown suitable for pasting into wikis, PRs, or docs</li>
+</ul>
+
+<h3>Acknowledgements &amp; References</h3>
+<p>Built with inspiration from Microsoft Threat Modeling Tool, OWASP Threat Dragon, and the MITRE ATT&CK/D3FEND knowledge bases. Visual design influenced by cyberpunk/sci-fi HUD aesthetics.</p>
+<ul>
+  <li><a href="https://benjitrapp.github.io/cultures/2022-06-11-threat-modeling/" target="_blank" rel="noopener" style="color:var(--accent-hi)">Threat Modeling — Culture &amp; Practice</a> — foundational concepts on STRIDE, PASTA, and integrating threat modeling into engineering culture</li>
+  <li><a href="https://attack.mitre.org/" target="_blank" rel="noopener" style="color:var(--accent-hi)">MITRE ATT&CK</a> — adversary tactics &amp; techniques knowledge base</li>
+  <li><a href="https://d3fend.mitre.org/" target="_blank" rel="noopener" style="color:var(--accent-hi)">MITRE D3FEND</a> — defensive countermeasure taxonomy</li>
+</ul>
+<p style="color:var(--txt-2);font-size:11px;margin-top:20px">PurpleSkjaldborg &middot; Purple-Team Threat Modeling &middot; Zero Dependencies &middot; MIT License</p>
+`
+};
+
+function openHelp(tab){
+  const ov=document.getElementById('help-overlay');
+  ov.classList.add('show');
+  setHelpTab(tab||'tutorial');
+}
+function closeHelp(){document.getElementById('help-overlay').classList.remove('show');}
+function setHelpTab(tab){
+  document.querySelectorAll('.help-tabs button').forEach(b=>{b.classList.toggle('active',b.dataset.htab===tab);});
+  document.getElementById('help-body').innerHTML=HELP_CONTENT[tab]||'';
+}
+document.getElementById('help-close').onclick=closeHelp;
+document.querySelectorAll('.help-tabs button').forEach(b=>b.onclick=()=>setHelpTab(b.dataset.htab));
+document.getElementById('btn-help').onclick=()=>openHelp();
+document.getElementById('help-overlay').addEventListener('keydown',e=>{if(e.key==='Escape')closeHelp();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='?'&&!e.ctrlKey&&!e.altKey&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'){
+    const ov=document.getElementById('help-overlay');
+    if(ov.classList.contains('show'))closeHelp(); else openHelp();
+  }
+});
+
+/* =====================================================================
    BOOT
    ===================================================================== */
-buildPalette(); initCanvas(); render(); loadSample();
+buildPalette(); initCanvas(); render(); loadSampleAD();
 </script>
 </body>
 </html>
