@@ -1831,44 +1831,70 @@ function fitBoundaryToContents(b){
   render(); toast('Boundary fitted to contents');
 }
 
-// Auto-arrange: force-directed-ish layout
+// Auto-arrange: semantic zone layout
 function autoArrange(){
   if(!state.nodes.length){toast('Nothing to arrange');return;}
   pushHistory();
-  // Assign layers based on node roles
-  const R2=80; // spacing
-  const groups={corp:[],dmz:[],cloud:[],redteam:[],blueteam:[],pivot:[],ext:[]};
+
+  // Classify each node into a semantic zone
+  const K8S_TYPES=new Set(['k8s','k8s_cp','etcd','crd','operator','k8s_node','pod','k8s_svc','ingress','netpol','configmap','secret','pvc','pv','storageclass','namespace']);
+  const CLOUD_TYPES=new Set(['cloud','vm','docker','bucket','manageddb','kms','secretsmgr','vpc','clb','serverless','cdn']);
+  const IAM_TYPES=new Set(['iam','ad','iamrole','sa','rbac']);
+  const NET_TYPES=new Set(['lb','nat_gw','vpn_gw','proxy','sdwan','nac','firewall','waf','ids','casb','dlp','dns_srv','mail_gw']);
+  const PIVOT_TYPES=new Set(['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine','lolbin','loldriver','filetransfer']);
+  const GREY_TYPES=new Set(['grey','redirector']);
+
+  const groups={ext:[],net:[],corp:[],k8s:[],cloud:[],iam:[],blueteam:[],grey:[],pivot:[],redteam:[]};
+
   state.nodes.forEach(n=>{
-    const c=COMPONENTS[n.type];
-    if(!c)return groups.corp.push(n);
-    if(c.redteam && ['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine','lolbin','loldriver','filetransfer'].includes(n.type)) groups.pivot.push(n);
-    else if(c.redteam) groups.redteam.push(n);
-    else if(c.blueteam) groups.blueteam.push(n);
-    else if(n.type==='external') groups.ext.push(n);
-    else if(['cloud','azure','m365','bucket','manageddb','kms','secretsmgr','iamrole','serverless','clb'].includes(n.type) || n.type==='siem') groups.cloud.push(n);
-    else if(['firewall','waf','cdn'].includes(n.type) || n.label.toLowerCase().includes('dmz') || n.label.toLowerCase().includes('gateway')) groups.dmz.push(n);
-    else groups.corp.push(n);
+    const c=COMPONENTS[n.type]||{};
+    if(n.type==='external')               groups.ext.push(n);
+    else if(K8S_TYPES.has(n.type))        groups.k8s.push(n);
+    else if(CLOUD_TYPES.has(n.type))      groups.cloud.push(n);
+    else if(IAM_TYPES.has(n.type))        groups.iam.push(n);
+    else if(NET_TYPES.has(n.type))        groups.net.push(n);
+    else if(c.blueteam)                   groups.blueteam.push(n);
+    else if(GREY_TYPES.has(n.type))       groups.grey.push(n);
+    else if(PIVOT_TYPES.has(n.type))      groups.pivot.push(n);
+    else if(c.redteam)                    groups.redteam.push(n);
+    else                                  groups.corp.push(n);
   });
 
-  // Layout each group in a grid pattern at designated regions
-  function layoutGrid(nodes,startX,startY,cols,spacing){
+  // Place nodes in a grid starting at (ox,oy), auto-computing cols from count
+  function layoutGrid(nodes, ox, oy, sp, maxCols=4){
+    if(!nodes.length) return;
+    const cols=Math.min(maxCols, Math.ceil(Math.sqrt(nodes.length)));
     nodes.forEach((n,i)=>{
-      const col=i%cols, row=Math.floor(i/cols);
-      n.x=snap(startX+col*spacing);
-      n.y=snap(startY+row*spacing);
+      n.x=snap(ox+(i%cols)*sp);
+      n.y=snap(oy+Math.floor(i/cols)*sp);
     });
   }
 
-  const sp=180; // spacing between nodes
-  layoutGrid(groups.ext, 50, 350, 1, sp);
-  layoutGrid(groups.dmz, 150, 700, 3, sp);
-  layoutGrid(groups.corp, 300, 150, 3, sp);
-  layoutGrid(groups.cloud, 1050, 150, 2, sp);
-  layoutGrid(groups.pivot, 200, 950, 3, sp);
-  layoutGrid(groups.redteam, 200, 1200, 3, sp);
-  layoutGrid(groups.blueteam, 1450, 150, 1, sp);
+  // Canvas zones — laid out on a conceptual threat-model map:
+  //
+  //  [Ext]  [Net/DMZ]  [Corporate core]  [Cloud]  [IAM]  [Blue Team]
+  //                    [Kubernetes]
+  //  [Red Team]  [Grey Zone]  [Pivot / Tunneling]
+  //
+  const sp=220; // spacing between node centres
 
-  // Auto-resize boundaries to fit their contained nodes
+  // Top band — left to right
+  layoutGrid(groups.ext,      100,  150, sp, 1);   // External actors — single column at far left
+  layoutGrid(groups.net,      380,  150, sp, 3);   // Network / DMZ
+  layoutGrid(groups.corp,     900,  150, sp, 4);   // Corporate / Application core
+  layoutGrid(groups.cloud,   1780,  150, sp, 3);   // Cloud services
+  layoutGrid(groups.iam,     2280,  150, sp, 2);   // Identity & Access
+  layoutGrid(groups.blueteam,2620,  150, sp, 2);   // Blue Team defense
+
+  // Middle band — Kubernetes cluster (below corporate)
+  layoutGrid(groups.k8s,      900,  800, sp, 5);
+
+  // Bottom band — attacker infrastructure
+  layoutGrid(groups.redteam,  100, 1500, sp, 4);   // Red Team ops
+  layoutGrid(groups.grey,     780, 1500, sp, 3);   // Grey zone / redirectors
+  layoutGrid(groups.pivot,   1240, 1500, sp, 4);   // Pivoting & tunneling
+
+  // Auto-resize rect boundaries to fit contained nodes
   state.boundaries.forEach(b=>fitBoundaryToContents(b));
 
   render(); fitView(); schedSave(); toast('Auto-arranged layout ⊞');
@@ -2102,10 +2128,19 @@ function inspectorBoundary(b){
     <button class="del-btn" id="f-del">Delete boundary</button>`;
 }
 
+function mitreUrl(id, name){
+  if(id.startsWith('T')){
+    // ATT&CK: T1071 → /techniques/T1071/, T1071.001 → /techniques/T1071/001/
+    const parts=id.split('.');
+    return 'https://attack.mitre.org/techniques/'+parts[0]+'/'+(parts[1]?parts[1]+'/':'');
+  }
+  // D3FEND: D3-PA → /technique/d3f:ProcessAnalysis (name without spaces)
+  return 'https://d3fend.mitre.org/technique/d3f:'+name.replace(/\s+/g,'');
+}
 function chipBox(list,cls,field){
   if(!list.length)return `<div style="font-size:11px;color:var(--txt-2);padding:4px 2px">None mapped yet.</div>`;
   return `<div class="chips">${list.map(t=>`<span class="chip ${cls}" data-rm="${t.id}" data-field="${field}">
-    <code>${t.id}</code> ${esc(t.name)} <span class="x" title="remove">×</span></span>`).join('')}</div>`;
+    <a href="${mitreUrl(t.id,t.name)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" title="Open on MITRE"><code>${t.id}</code></a> ${esc(t.name)} <span class="x" title="remove">×</span></span>`).join('')}</div>`;
 }
 
 function wireInspector(){
@@ -2507,7 +2542,7 @@ canvas.addEventListener('pointerdown',e=>{
       if(nodeEl){
         const id=nodeEl.dataset.id;
         if(!connectFrom){connectFrom=id; showHint('Now click the <b>target</b> node.'); }
-        else{ addEdge(connectFrom,id,c.kind==='attack'||c.kind==='tunnel_off',c.kind==='tunnel_off'||c.kind==='tunnel_def'); connectFrom=null; if(!e.shiftKey)disarm(); else showHint('Click next <b>source</b> node.'); }
+        else{ addEdge(connectFrom,id,c.kind==='attack'||c.kind==='tunnel_off',c.kind==='tunnel_off'||c.kind==='tunnel_def'); connectFrom=null; showHint('Click next <b>source</b> node — or press <b>Esc</b> to stop.'); }
       }
       return;
     }
