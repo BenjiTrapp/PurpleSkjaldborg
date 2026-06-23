@@ -416,6 +416,7 @@ svg#canvas.panning{cursor:grabbing}
         <button class="tbtn" id="btn-arrange" title="Auto-arrange layout">⊞ Arrange</button>
         <button class="tbtn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
         <button class="tbtn" id="btn-redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↪ Redo</button>
+        <button class="tbtn" id="btn-new" title="New empty project">📋 New</button>
         <button class="tbtn ghost" id="btn-import" title="Import JSON">⬇</button>
         <button class="tbtn" id="btn-export" title="Export JSON">⬆ Save</button>
         <button class="tbtn" id="btn-svg" title="Export as SVG image">🖼 SVG</button>
@@ -3778,6 +3779,7 @@ document.getElementById('btn-sample').onclick=loadSample;
 document.getElementById('btn-undo').onclick=undo;
 document.getElementById('btn-redo').onclick=redo;
 document.getElementById('btn-arrange').onclick=autoArrange;
+document.getElementById('btn-new').onclick=function(){if(state.nodes.length||state.boundaries.length){if(!confirm('Discard current project and start fresh?'))return;}pushHistory();state={nodes:[],edges:[],boundaries:[],seq:1};select(null);render();schedSave();toast('New empty project created');};
 document.getElementById('btn-import').onclick=()=>document.getElementById('file-input').click();
 document.getElementById('file-input').onchange=e=>{if(e.target.files[0])importJSON(e.target.files[0]);e.target.value='';};
 
@@ -4168,7 +4170,7 @@ buildPalette(); initCanvas();
 if(loadFromLS()){
   render(); fitView(); pushHistory(); toast('Session restored from browser storage 💾');
 } else {
-  loadSampleAD(); pushHistory();
+  state={nodes:[],edges:[],boundaries:[],seq:1}; render(); pushHistory();
 }
 _updateUndoRedo();
 </script>
