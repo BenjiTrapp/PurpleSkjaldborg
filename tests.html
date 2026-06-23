@@ -79,6 +79,7 @@ function expect(val) {
     not: {
       toBe(exp){ if(val===exp) throw new Error(`Expected ${JSON.stringify(val)} not to be ${JSON.stringify(exp)}`); },
       toBeTruthy(){ if(val) throw new Error(`Expected ${JSON.stringify(val)} to be falsy`); },
+      toContain(sub){ if(String(val).includes(sub)||(Array.isArray(val)&&val.includes(sub))) throw new Error(`Expected ${JSON.stringify(val)} not to contain ${JSON.stringify(sub)}`); },
     }
   };
 }
@@ -183,8 +184,46 @@ function loadFromLS(ls){
   return null;
 }
 
-// --- nodesInside ---
+// --- nodesInside (rect + freehand) ---
+function ptInPoly(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+function freehandBBox(b){
+  const xs=b.points.map(p=>p[0]), ys=b.points.map(p=>p[1]);
+  const x=Math.min(...xs), y=Math.min(...ys);
+  return {x, y, w:Math.max(...xs)-x, h:Math.max(...ys)-y};
+}
+function smoothClosedPath(pts,tension=0.35){
+  if(pts.length<2) return '';
+  if(pts.length===2) return `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]} Z`;
+  const n=pts.length; let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=0;i<n;i++){
+    const p0=pts[(i-1+n)%n],p1=pts[i],p2=pts[(i+1)%n],p3=pts[(i+2)%n];
+    const cp1x=p1[0]+(p2[0]-p0[0])*tension,cp1y=p1[1]+(p2[1]-p0[1])*tension;
+    const cp2x=p2[0]-(p3[0]-p1[0])*tension,cp2y=p2[1]-(p3[1]-p1[1])*tension;
+    d+=` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  return d+' Z';
+}
+function smoothOpenPath(pts,cursorX,cursorY,tension=0.35){
+  const all=[...pts,[cursorX,cursorY]]; const n=all.length;
+  if(n<2) return `M${all[0][0]},${all[0][1]}`;
+  let d=`M${all[0][0]},${all[0][1]}`;
+  for(let i=0;i<n-1;i++){
+    const p0=all[Math.max(0,i-1)],p1=all[i],p2=all[i+1],p3=all[Math.min(n-1,i+2)];
+    const cp1x=p1[0]+(p2[0]-p0[0])*tension,cp1y=p1[1]+(p2[1]-p0[1])*tension;
+    const cp2x=p2[0]-(p3[0]-p1[0])*tension,cp2y=p2[1]-(p3[1]-p1[1])*tension;
+    d+=` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
 function nodesInside(b, nodes){
+  if(b.points) return nodes.filter(n=>ptInPoly(n.x,n.y,b.points));
   return nodes.filter(n=>n.x>=b.x&&n.x<=b.x+b.w&&n.y>=b.y&&n.y<=b.y+b.h);
 }
 
@@ -319,54 +358,76 @@ describe('nodesInside() — boundary containment', () => {
 });
 
 describe('History — undo / redo stack', () => {
-  // Reset history before this suite
-  const h = []; let hi = -1;
-  function ph(s){ h.splice(hi+1); h.push(JSON.stringify(s)); hi=h.length-1; }
-  function un(){ if(hi<=0) return null; hi--; return JSON.parse(h[hi]); }
-  function re(){ if(hi>=h.length-1) return null; hi++; return JSON.parse(h[hi]); }
+  // Each test uses makeHist() for fully isolated state — safe to re-run
+  function makeHist(){
+    const h=[]; let hi=-1;
+    return {
+      get h(){ return h; },
+      get hi(){ return hi; },
+      ph(s){ h.splice(hi+1); h.push(JSON.stringify(s)); hi=h.length-1; },
+      un(){ if(hi<=0) return null; hi--; return JSON.parse(h[hi]); },
+      re(){ if(hi>=h.length-1) return null; hi++; return JSON.parse(h[hi]); }
+    };
+  }
 
-  it('starts with no history', () => { expect(h.length).toBe(0); });
+  it('starts with no history', () => {
+    const {h} = makeHist();
+    expect(h.length).toBe(0);
+  });
 
   it('push records state snapshot', () => {
+    const hist = makeHist();
     const s1={nodes:[{id:'n1',label:'A'}],edges:[],boundaries:[],seq:2};
-    ph(s1); expect(h.length).toBe(1); expect(hi).toBe(0);
+    hist.ph(s1);
+    expect(hist.h.length).toBe(1);
+    expect(hist.hi).toBe(0);
   });
 
   it('undo returns previous state', () => {
-    const s0={nodes:[],edges:[],boundaries:[],seq:1};
-    ph(s0);
-    const s1={nodes:[{id:'n1',label:'A'}],edges:[],boundaries:[],seq:2};
-    ph(s1);
-    const back = un();
+    const hist = makeHist();
+    hist.ph({nodes:[],edges:[],boundaries:[],seq:1});
+    hist.ph({nodes:[{id:'n1',label:'A'}],edges:[],boundaries:[],seq:2});
+    const back = hist.un();
     expect(back.nodes).toHaveLength(0);
   });
 
   it('redo re-applies undone state', () => {
-    const s0={nodes:[],edges:[],boundaries:[],seq:1};
-    ph(s0);
-    const s1={nodes:[{id:'n1'}],edges:[],boundaries:[],seq:2};
-    ph(s1);
-    un(); // back to s0
-    const forward = re();
+    const hist = makeHist();
+    hist.ph({nodes:[],edges:[],boundaries:[],seq:1});
+    hist.ph({nodes:[{id:'n1'}],edges:[],boundaries:[],seq:2});
+    hist.un();
+    const forward = hist.re();
     expect(forward.nodes).toHaveLength(1);
   });
 
   it('undo at beginning returns null', () => {
-    const fresh=[]; let fi=-1;
-    function u(){ if(fi<=0) return null; fi--; return JSON.parse(fresh[fi]); }
-    const r = u();
-    expect(r).toBe(null);
+    const hist = makeHist();
+    expect(hist.un()).toBe(null);
+  });
+
+  it('undo after one push returns null (only one state = no previous)', () => {
+    const hist = makeHist();
+    hist.ph({nodes:[{id:'n1'}],seq:1});
+    expect(hist.un()).toBe(null);
   });
 
   it('new push after undo trims redo history', () => {
-    const hist=[]; let idx=-1;
-    function p(s){ hist.splice(idx+1); hist.push(JSON.stringify(s)); idx=hist.length-1; }
-    function u2(){ if(idx<=0) return; idx--; }
-    p({nodes:[],seq:1});
-    p({nodes:[{id:'n1'}],seq:2});
-    u2(); // undo to empty state
-    p({nodes:[{id:'n2'}],seq:3}); // new action — should cut redo branch
-    expect(hist.length).toBe(2);
+    const hist = makeHist();
+    hist.ph({nodes:[],seq:1});
+    hist.ph({nodes:[{id:'n1'}],seq:2});
+    hist.un();
+    hist.ph({nodes:[{id:'n2'}],seq:3});
+    expect(hist.h.length).toBe(2);
+  });
+
+  it('multiple undos walk back correctly', () => {
+    const hist = makeHist();
+    hist.ph({nodes:[],seq:1});
+    hist.ph({nodes:[{id:'n1'}],seq:2});
+    hist.ph({nodes:[{id:'n1'},{id:'n2'}],seq:3});
+    hist.un();
+    const s = hist.un();
+    expect(s.nodes).toHaveLength(0);
   });
 });
 
@@ -498,6 +559,147 @@ describe('byId() — array lookup', () => {
   it('returns first match for duplicates', () => {
     const dup = [{id:'x',v:1},{id:'x',v:2}];
     expect(byId(dup,'x').v).toBe(1);
+  });
+});
+
+describe('ptInPoly() — point-in-polygon (ray casting)', () => {
+  // Unit square polygon
+  const square = [[0,0],[100,0],[100,100],[0,100]];
+
+  it('center point is inside', () => {
+    expect(ptInPoly(50, 50, square)).toBeTruthy();
+  });
+
+  it('point outside is not inside', () => {
+    expect(ptInPoly(150, 50, square)).toBeFalsy();
+  });
+
+  it('point at top-left corner edge case', () => {
+    // Corner points are technically on the boundary — ray casting is undefined there,
+    // but we verify the function does not throw
+    expect(typeof ptInPoly(0, 0, square)).toBe('boolean');
+  });
+
+  it('point above polygon is outside', () => {
+    expect(ptInPoly(50, -10, square)).toBeFalsy();
+  });
+
+  it('works with an irregular polygon', () => {
+    // Triangle: (0,0), (200,0), (100,200)
+    const tri = [[0,0],[200,0],[100,200]];
+    expect(ptInPoly(100, 50, tri)).toBeTruthy();
+    expect(ptInPoly(10, 190, tri)).toBeFalsy();
+  });
+
+  it('works with a concave polygon', () => {
+    // L-shape: inside top-left block
+    const lShape = [[0,0],[100,0],[100,50],[50,50],[50,100],[0,100]];
+    expect(ptInPoly(25, 75, lShape)).toBeTruthy();  // inside bottom of L
+    expect(ptInPoly(75, 75, lShape)).toBeFalsy();   // outside (notch area)
+  });
+});
+
+describe('freehandBBox() — bounding box of polygon points', () => {
+  it('correct bbox for axis-aligned rectangle points', () => {
+    const b = {points:[[10,20],[110,20],[110,80],[10,80]]};
+    const bb = freehandBBox(b);
+    expect(bb.x).toBe(10); expect(bb.y).toBe(20);
+    expect(bb.w).toBe(100); expect(bb.h).toBe(60);
+  });
+
+  it('single point gives zero-size bbox', () => {
+    const b = {points:[[50,50]]};
+    const bb = freehandBBox(b);
+    expect(bb.x).toBe(50); expect(bb.y).toBe(50);
+    expect(bb.w).toBe(0); expect(bb.h).toBe(0);
+  });
+
+  it('handles negative coordinates', () => {
+    const b = {points:[[-50,-50],[50,50]]};
+    const bb = freehandBBox(b);
+    expect(bb.x).toBe(-50); expect(bb.y).toBe(-50);
+    expect(bb.w).toBe(100); expect(bb.h).toBe(100);
+  });
+
+  it('irregular polygon gives correct extent', () => {
+    const b = {points:[[0,0],[300,150],[100,400],[-50,200]]};
+    const bb = freehandBBox(b);
+    expect(bb.x).toBe(-50); expect(bb.y).toBe(0);
+    expect(bb.w).toBe(350); expect(bb.h).toBe(400);
+  });
+});
+
+describe('nodesInside() — freehand polygon containment', () => {
+  it('detects node inside a triangular freehand boundary', () => {
+    const tri = {points:[[0,0],[200,0],[100,200]]};
+    const nodes = [{x:100,y:50},{x:10,y:190}];
+    const inside = nodesInside(tri, nodes);
+    expect(inside).toHaveLength(1);
+    expect(inside[0].x).toBe(100);
+  });
+
+  it('rectangular freehand contains same nodes as rect boundary', () => {
+    const fh  = {points:[[100,100],[300,100],[300,300],[100,300]]};
+    const rect = {x:100,y:100,w:200,h:200};
+    const nodes = [{x:200,y:200},{x:50,y:50},{x:350,y:200}];
+    const inFh   = nodesInside(fh, nodes);
+    const inRect = nodesInside(rect, nodes);
+    expect(inFh.length).toBe(inRect.length);
+  });
+
+  it('empty polygon contains no nodes', () => {
+    const empty = {points:[]};
+    // ptInPoly with empty array always returns false
+    expect(nodesInside(empty, [{x:0,y:0}])).toHaveLength(0);
+  });
+});
+
+describe('smoothClosedPath() — SVG bezier path', () => {
+  it('returns empty string for 0 or 1 point', () => {
+    expect(smoothClosedPath([])).toBe('');
+    expect(smoothClosedPath([[10,10]])).toBe('');
+  });
+
+  it('two points produce a line with Z', () => {
+    const d = smoothClosedPath([[0,0],[100,0]]);
+    expect(d).toContain('M0,0');
+    expect(d).toContain('Z');
+  });
+
+  it('starts with M at first point', () => {
+    const pts = [[10,20],[100,20],[100,100],[10,100]];
+    const d = smoothClosedPath(pts);
+    expect(d.startsWith('M10,20')).toBeTruthy();
+  });
+
+  it('closed path ends with Z', () => {
+    const pts = [[0,0],[100,0],[100,100],[0,100]];
+    expect(smoothClosedPath(pts).endsWith('Z')).toBeTruthy();
+  });
+
+  it('uses cubic bezier segments (C command)', () => {
+    const pts = [[0,0],[100,0],[100,100],[0,100]];
+    expect(smoothClosedPath(pts)).toContain('C');
+  });
+});
+
+describe('smoothOpenPath() — open SVG bezier path', () => {
+  it('single point returns M only', () => {
+    const d = smoothOpenPath([], 50, 50);
+    expect(d).toContain('M');
+    expect(d).not.toContain('Z');
+  });
+
+  it('does not close the path (no Z)', () => {
+    const pts = [[0,0],[100,0],[100,100]];
+    const d = smoothOpenPath(pts, 50, 150);
+    expect(d).not.toContain('Z');
+  });
+
+  it('starts at first point', () => {
+    const pts = [[30,40],[100,80]];
+    const d = smoothOpenPath(pts, 150, 120);
+    expect(d.startsWith('M30,40')).toBeTruthy();
   });
 });
 

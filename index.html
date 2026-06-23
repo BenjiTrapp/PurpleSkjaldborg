@@ -418,6 +418,7 @@ svg#canvas.panning{cursor:grabbing}
         <button class="tbtn" id="btn-redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↪ Redo</button>
         <button class="tbtn ghost" id="btn-import" title="Import JSON">⬇</button>
         <button class="tbtn" id="btn-export" title="Export JSON">⬆ Save</button>
+        <button class="tbtn" id="btn-svg" title="Export as SVG image">🖼 SVG</button>
         <button class="tbtn primary" id="btn-sample">✨ Sample</button>
         <button class="tbtn" id="btn-help" title="Help & tutorial (?)">? Help</button>
       </div>
@@ -592,6 +593,7 @@ const COMPONENTS = {
   tunnel_off:{label:'Pivot / Tunnel',sub:'offensive tunnel',       icon:'tunnel',  color:'#ef4444', kind:'tunnel_off', desc:'Offensive tunnel / pivot (Ligolo-ng, Chisel, SSH). Thick glowing red energy stream between nodes. Click source then target.'},
   tunnel_def:{label:'Secure Tunnel', sub:'VPN · encrypted',       icon:'tunnel',  color:'#38bdf8', kind:'tunnel_def', desc:'Defensive / legitimate encrypted tunnel (VPN, mTLS, WireGuard). Thick glowing blue energy stream. Click source then target.'},
   trust:   {label:'Trust Boundary',  sub:'force field · D3FEND',  icon:'trust',   color:'#38bdf8', kind:'boundary', bnd:'trust', desc:'Defensive force field mapped to MITRE D3FEND. Drag to enclose what it protects.'},
+  freetrust:{label:'Freehand Boundary',sub:'draw · polygon · free',icon:'trust',  color:'#c41e3a', kind:'freehand', bnd:'freehand', desc:'Freely drawable trust boundary — click to place vertices, Esc to close the polygon.'},
   privacy: {label:'Data Protection', sub:'PII · GDPR',            icon:'privacy', color:'#22c55e', kind:'boundary', bnd:'privacy', desc:'Marks privacy-relevant assets (PII) requiring explicit protection.'},
   cloudbnd:{label:'Cloud Boundary',  sub:'aws · azure · gcp',     icon:'cloud',   color:'#7dd3fc', kind:'boundary', bnd:'cloudbnd', desc:'Cloud environment boundary — encompasses cloud-native resources (accounts, subscriptions, tenants).'},
 
@@ -696,7 +698,8 @@ const BND = {
   redteam:{label:'Red Team Infra',   color:'var(--offense)', glow:'var(--offense-glow)', grad:'rt-grad', icon:'skull',      dash:'8 6',  anim:true,  inner:false, mapping:'attack', defLabel:'Red Team Infrastructure'},
   grey:   {label:'Grey Zone',        color:'#94a3b8',        glow:'#cbd5e1',             grad:'gr-grad', icon:'redirector', dash:'3 6',  anim:false, inner:false, mapping:'attack', defLabel:'Grey Zone'},
   namespace:{label:'Namespace',      color:'#6366f1',        glow:'#a5b4fc',             grad:'ns-grad', icon:'namespace',  dash:'4 6',  anim:false, inner:false, mapping:'d3fend', defLabel:'Namespace'},
-  netpol: {label:'NetworkPolicy',    color:'#8b5cf6',        glow:'#c4b5fd',             grad:'np-grad', icon:'netpol',     dash:'7 5',  anim:true,  inner:false, mapping:'d3fend', defLabel:'NetworkPolicy'}
+  netpol: {label:'NetworkPolicy',    color:'#8b5cf6',        glow:'#c4b5fd',             grad:'np-grad', icon:'netpol',     dash:'7 5',  anim:true,  inner:false, mapping:'d3fend', defLabel:'NetworkPolicy'},
+  freehand:{label:'Freehand Boundary',color:'#c41e3a',      glow:'#e05070',             grad:'rt-grad', icon:'trust',      dash:'14 7', anim:false, inner:false, mapping:'d3fend', defLabel:'Trust Boundary'}
 };
 
 // Default technique mappings pre-filled when an infra/defense node is added
@@ -1323,40 +1326,50 @@ function iconSvg(key,color,size=20){
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="color:${color}">${ICONS[key]}</svg>`;
 }
 const PGROUPS = [
-  {label:'Core Components', items:['external','process','store','flow'], subs:[
-    {label:'App Patterns', items:['webapp','mobileapp','api','queue','cache','cdn']}
+  // ── 1. DFD-Bausteine ─────────────────────────────────────────────────────
+  {label:'DFD Elements', items:['external','process','store'], subs:[
+    {label:'Application Layer', items:['webapp','mobileapp','api','queue','cache','cdn','serverless']}
   ]},
-  {label:'Infrastructure', items:['iam','ad','cloud','k8s','docker','vm'], subs:[
-    {label:'Cloud Services', items:['bucket','manageddb','kms','secretsmgr','iamrole','vpc','clb','serverless']}
+  // ── 2. Datenflüsse & Verbindungen ────────────────────────────────────────
+  {label:'Flows & Connections', items:['flow','tunnel_def'], subs:[
+    {label:'Attack Vectors', items:['attack','tunnel_off']}
   ]},
-  {label:'Kubernetes', subs:[
+  // ── 3. Sicherheitszonen (Threat-Model-Perimeter) ─────────────────────────
+  {label:'Security Zones', items:['trust','freetrust','privacy','cloudbnd']},
+  // ── 4. Identität & Zugriff ───────────────────────────────────────────────
+  {label:'Identity & Access', items:['iam','ad','iamrole','sa','rbac']},
+  // ── 5. Cloud & Infrastruktur ─────────────────────────────────────────────
+  {label:'Cloud & Infrastructure', items:['cloud','vm','docker'], subs:[
+    {label:'Cloud Services', items:['bucket','manageddb','kms','secretsmgr','vpc','clb']}
+  ]},
+  // ── 6. Kubernetes ────────────────────────────────────────────────────────
+  {label:'Kubernetes', items:['k8s'], subs:[
     {label:'Control Plane', items:['k8s_cp','etcd','crd','operator']},
     {label:'Workloads', items:['k8s_node','pod']},
     {label:'Networking', items:['k8s_svc','ingress','netpol']},
-    {label:'Config & Identity', items:['configmap','secret','sa','rbac']},
+    {label:'Config & Secrets', items:['configmap','secret']},
     {label:'Storage', items:['pvc','pv','storageclass']},
     {label:'Scope', items:['namespace']}
   ]},
-  {label:'Boundaries', items:['attack','trust','privacy','cloudbnd']},
-  {label:'Red Team Infra', items:['redteam','grey','redirector','payload'], subs:[
-    {label:'C2 Frameworks', items:['c2custom']},
-    {label:'Cloud C2 & Fronting', items:['cdnfront','legitabuse']},
-    {label:'Phishing Infra', items:['phishing']},
-    {label:'Hardware Implants', items:['hwimplant']},
-    {label:'Pivoting & Tunneling', items:['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine']},
-    {label:'Living off the Land', items:['lolbin','loldriver','filetransfer']}
-  ]},
-  {label:'Networking', items:['lb','sdwan','nat_gw'], subs:[
-    {label:'Access & Proxy', items:['proxy','vpn_gw','nac']},
-    {label:'Threat Detection', items:['ids','casb','dlp']},
+  // ── 7. Netzwerk ──────────────────────────────────────────────────────────
+  {label:'Network', items:['lb','nat_gw','vpn_gw','proxy'], subs:[
+    {label:'WAN & SD-WAN', items:['sdwan']},
+    {label:'Access Control', items:['nac','firewall','waf']},
+    {label:'Visibility', items:['ids','casb','dlp']},
     {label:'DNS & Mail', items:['dns_srv','mail_gw']}
   ]},
-  {label:'Blue Team Defense', items:['siem','asm'], subs:[
-    {label:'Endpoint (EDR/XDR)', items:['edr']},
-    {label:'Network Detection (NDR/NOC)', items:['ndr']},
-    {label:'Network Filtering', items:['firewall','waf']},
+  // ── 8. Blue Team / Defense ───────────────────────────────────────────────
+  {label:'Blue Team Defense', items:['siem','edr','ndr','asm'], subs:[
     {label:'Cloud Security', items:['cnapp','cspm']},
     {label:'Hardening & Deception', items:['hardening','deception']}
+  ]},
+  // ── 9. Red Team / Offense ────────────────────────────────────────────────
+  {label:'Red Team', items:['redteam','grey','redirector','payload'], subs:[
+    {label:'C2 Frameworks', items:['c2custom','cobalt','bruteratel']},
+    {label:'Cloud C2 & Fronting', items:['cdnfront','legitabuse']},
+    {label:'Phishing & Initial Access', items:['phishing','hwimplant']},
+    {label:'Pivoting & Tunneling', items:['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine']},
+    {label:'Living off the Land', items:['lolbin','loldriver','filetransfer']}
   ]}
 ];
 const collapsed=new Set();
@@ -1433,12 +1446,13 @@ function armTool(tool){
   if(c.kind==='edge'||c.kind==='attack') showHint(`<b>${c.label}</b>: click <b>source</b> → then <b>target</b> node. Hold <b>Shift</b> to chain multiple. Esc to cancel.`);
   else if(c.kind==='tunnel_off'||c.kind==='tunnel_def') showHint(`<b>${c.label}</b>: click <b>source</b> → <b>target</b>. Creates a glowing tunnel edge (${c.kind==='tunnel_off'?'red = offensive pivot':'blue = legitimate VPN/encrypted'}).`);
   else if(c.kind==='boundary') showHint(`<b>${c.label}</b>: click canvas to place. Then drag edges to resize. Enclose nodes to define a trust zone.`);
+  else if(c.kind==='freehand') showHint(`<b>${c.label}</b>: click canvas to place vertices. <b>Double-click</b> to close the polygon. <b>Esc</b> to cancel.`);
   else if(c.blueteam) showHint(`<b>${c.label}</b>: click a <b>node</b> to attach as shield 🛡️ — adds D3FEND countermeasures. Or click canvas for standalone.`);
   else if(c.redteam) showHint(`<b>${c.label}</b>: place on canvas, then connect with attack edges. ATT&CK techniques are auto-mapped.`);
   else showHint(`<b>${c.label}</b>: click canvas to place. Then connect edges and assign STRIDE threats in the inspector.`);
 }
 function disarm(){
-  armed=null; connectFrom=null;
+  armed=null; connectFrom=null; freePath=null;
   document.querySelectorAll('.palette-item').forEach(el=>el.classList.remove('armed'));
   canvas.classList.remove('connect-mode');
   clearTempLine();
@@ -1614,33 +1628,94 @@ function renderBoundaries(){
     const col=cfg.color, glow=cfg.glow, grad=cfg.grad, rx=14;
     const animStyle=cfg.anim?'style="animation:dashmove 1.6s linear infinite"':'';
     const grp=document.createElementNS(SVGNS,'g'); grp.setAttribute('class','boundary'); grp.dataset.id=b.id;
-    grp.innerHTML=`
-      <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="url(#${grad})"/>
-      <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="${col}" opacity=".05"/>
-      ${cfg.inner?`<rect x="${b.x+3}" y="${b.y+3}" width="${b.w-6}" height="${b.h-6}" rx="${rx-2}" fill="none"
-            stroke="${glow}" stroke-width="1.4" opacity=".5" class="ff-border" stroke-dasharray="2 7"/>`:''}
-      <rect class="bnd-hit" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="transparent"
-            stroke="${col}" stroke-width="${sel?2.4:1.8}" stroke-dasharray="${cfg.dash}" ${animStyle}/>
-      <g transform="translate(${b.x+12} ${b.y+10})">
-        <g style="color:${col}" transform="scale(.8)">${ICONS[cfg.icon]}</g>
-        <text class="bnd-label" x="26" y="13" fill="${col}">${esc(b.label)}</text>
-      </g>
-      <g class="bnd-lock" data-lockid="${b.id}" transform="translate(${b.x+b.w-22} ${b.y+b.h-22})">
-        <circle r="10" cx="10" cy="10" fill="rgba(8,8,12,.7)" stroke="${col}" stroke-width=".8" stroke-opacity=".5"/>
-        <text x="10" y="14" text-anchor="middle" style="font-size:11px;fill:${col}" >${b.locked!==false?'🔒':'🔓'}</text>
-      </g>
-      ${(()=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual);return b.w>=164?`<g transform="translate(${b.x+b.w-126} ${b.y+7})">
-        <rect width="118" height="19" rx="9.5" fill="rgba(8,8,12,.75)" stroke="${col}" stroke-opacity=".35"/>
-        <text x="9" y="13.5" style="font:700 9.5px var(--mono);fill:var(--offense)">A ${sc.A}</text>
-        <text x="45" y="13.5" style="font:700 9.5px var(--mono);fill:var(--trust)">D ${sc.D}</text>
-        <text x="80" y="13.5" style="font:700 9.5px var(--mono);fill:${rk.c}">R ${sc.residual}</text></g>`:''})()}
-      ${sel?`<rect class="bnd-resize" x="${b.x+b.w-9}" y="${b.y+b.h-9}" width="14" height="14" rx="3" fill="${col}" stroke="#000" stroke-width="1"/>`:''}
-    `;
+
+    if(b.points){
+      // Freehand smooth-curve rendering
+      const pts=b.points, pathD=pts.length>1?smoothOpenPath(pts.slice(0,-1),pts[pts.length-1][0],pts[pts.length-1][1]):`M${pts[0][0]},${pts[0][1]}`;
+      const bb=freehandBBox(b);
+      const sc=boundaryScore(b), rk=riskLevel(sc.residual);
+      grp.innerHTML=`
+        <path class="bnd-hit" d="${pathD}" fill="transparent"
+          stroke="${col}" stroke-width="${sel?2.8:2}" stroke-dasharray="${cfg.dash}"
+          stroke-linecap="round" stroke-linejoin="round"/>
+        <g transform="translate(${bb.x+10} ${bb.y-18})">
+          <rect x="-4" y="-13" width="${esc(b.label).length*7+36}" height="18" rx="4" fill="rgba(8,8,12,.82)" stroke="${col}" stroke-width=".8" stroke-opacity=".6"/>
+          <g style="color:${col}" transform="scale(.75) translate(-2,-10)">${ICONS[cfg.icon]}</g>
+          <text class="bnd-label" x="18" y="0" fill="${col}" style="font-size:11px">${esc(b.label)}</text>
+        </g>
+        <g class="bnd-lock" data-lockid="${b.id}" transform="translate(${bb.x+bb.w-22} ${bb.y+bb.h+4})">
+          <circle r="10" cx="10" cy="10" fill="rgba(8,8,12,.7)" stroke="${col}" stroke-width=".8" stroke-opacity=".5"/>
+          <text x="10" y="14" text-anchor="middle" style="font-size:11px;fill:${col}">${b.locked!==false?'🔒':'🔓'}</text>
+        </g>
+        <g transform="translate(${bb.x+bb.w-126} ${bb.y+bb.h+4})">
+          <rect width="118" height="19" rx="9.5" fill="rgba(8,8,12,.75)" stroke="${col}" stroke-opacity=".35"/>
+          <text x="9" y="13.5" style="font:700 9.5px var(--mono);fill:var(--offense)">A ${sc.A}</text>
+          <text x="45" y="13.5" style="font:700 9.5px var(--mono);fill:var(--trust)">D ${sc.D}</text>
+          <text x="80" y="13.5" style="font:700 9.5px var(--mono);fill:${rk.c}">R ${sc.residual}</text>
+        </g>
+        ${sel?b.points.map(([px,py])=>`<circle class="fh-pt" cx="${px}" cy="${py}" r="5" fill="${col}" stroke="#0a0a0f" stroke-width="1.5" opacity=".9"/>`).join(''):''}
+      `;
+    } else {
+      grp.innerHTML=`
+        <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="url(#${grad})"/>
+        <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="${col}" opacity=".05"/>
+        ${cfg.inner?`<rect x="${b.x+3}" y="${b.y+3}" width="${b.w-6}" height="${b.h-6}" rx="${rx-2}" fill="none"
+              stroke="${glow}" stroke-width="1.4" opacity=".5" class="ff-border" stroke-dasharray="2 7"/>`:''}
+        <rect class="bnd-hit" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="transparent"
+              stroke="${col}" stroke-width="${sel?2.4:1.8}" stroke-dasharray="${cfg.dash}" ${animStyle}/>
+        <g transform="translate(${b.x+12} ${b.y+10})">
+          <g style="color:${col}" transform="scale(.8)">${ICONS[cfg.icon]}</g>
+          <text class="bnd-label" x="26" y="13" fill="${col}">${esc(b.label)}</text>
+        </g>
+        <g class="bnd-lock" data-lockid="${b.id}" transform="translate(${b.x+b.w-22} ${b.y+b.h-22})">
+          <circle r="10" cx="10" cy="10" fill="rgba(8,8,12,.7)" stroke="${col}" stroke-width=".8" stroke-opacity=".5"/>
+          <text x="10" y="14" text-anchor="middle" style="font-size:11px;fill:${col}" >${b.locked!==false?'🔒':'🔓'}</text>
+        </g>
+        ${(()=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual);return b.w>=164?`<g transform="translate(${b.x+b.w-126} ${b.y+7})">
+          <rect width="118" height="19" rx="9.5" fill="rgba(8,8,12,.75)" stroke="${col}" stroke-opacity=".35"/>
+          <text x="9" y="13.5" style="font:700 9.5px var(--mono);fill:var(--offense)">A ${sc.A}</text>
+          <text x="45" y="13.5" style="font:700 9.5px var(--mono);fill:var(--trust)">D ${sc.D}</text>
+          <text x="80" y="13.5" style="font:700 9.5px var(--mono);fill:${rk.c}">R ${sc.residual}</text></g>`:''})()}
+        ${sel?`<rect class="bnd-resize" x="${b.x+b.w-9}" y="${b.y+b.h-9}" width="14" height="14" rx="3" fill="${col}" stroke="#000" stroke-width="1"/>`:''}
+      `;
+    }
     g.appendChild(grp);
   });
 }
 
 function clearTempLine(){document.getElementById('g-temp').innerHTML='';}
+
+function renderFreePathPreview(cx,cy){
+  const g=document.getElementById('g-temp'); g.innerHTML='';
+  if(!freePath||!freePath.points.length) return;
+  const pts=freePath.points;
+  const col='#c41e3a';
+
+  // Smooth open path through committed points + cursor
+  if(pts.length>=1){
+    const openD=smoothOpenPath(pts,cx,cy);
+    const op=document.createElementNS(SVGNS,'path');
+    op.setAttribute('d',openD); op.setAttribute('fill','none');
+    op.setAttribute('stroke',col); op.setAttribute('stroke-width','2');
+    op.setAttribute('stroke-dasharray','14 7');
+    op.setAttribute('stroke-linecap','round'); op.setAttribute('opacity','.85');
+    g.appendChild(op);
+  }
+
+  // Vertex dots
+  pts.forEach(([px,py])=>{
+    const c=document.createElementNS(SVGNS,'circle');
+    c.setAttribute('cx',px); c.setAttribute('cy',py); c.setAttribute('r','4');
+    c.setAttribute('fill',col); c.setAttribute('stroke','#0a0a0f'); c.setAttribute('stroke-width','1.5');
+    g.appendChild(c);
+  });
+
+  // Cursor dot
+  const cd=document.createElementNS(SVGNS,'circle');
+  cd.setAttribute('cx',cx); cd.setAttribute('cy',cy); cd.setAttribute('r','3');
+  cd.setAttribute('fill','none'); cd.setAttribute('stroke',col); cd.setAttribute('stroke-width','1.5'); cd.setAttribute('opacity','.6');
+  g.appendChild(cd);
+}
 function drawTempLine(x1,y1,x2,y2){
   const off=COMPONENTS[armed]&&COMPONENTS[armed].kind==='attack';
   document.getElementById('g-temp').innerHTML=
@@ -1683,8 +1758,55 @@ function addEdge(from,to,offensive,tunnel){
 }
 const snap=v=>Math.round(v/11)*11;
 
+// Smooth closed SVG path through points using cubic bezier (Catmull-Rom → bezier)
+function smoothClosedPath(pts, tension=0.35){
+  if(pts.length<2) return '';
+  if(pts.length===2) return `M${pts[0][0]},${pts[0][1]} L${pts[1][0]},${pts[1][1]} Z`;
+  const n=pts.length;
+  let d=`M${pts[0][0]},${pts[0][1]}`;
+  for(let i=0;i<n;i++){
+    const p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n], p3=pts[(i+2)%n];
+    const cp1x=p1[0]+(p2[0]-p0[0])*tension, cp1y=p1[1]+(p2[1]-p0[1])*tension;
+    const cp2x=p2[0]-(p3[0]-p1[0])*tension, cp2y=p2[1]-(p3[1]-p1[1])*tension;
+    d+=` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  return d+' Z';
+}
+// Open smooth path for preview (not closed)
+function smoothOpenPath(pts, cursorX, cursorY, tension=0.35){
+  if(!pts.length) return '';
+  const all=[...pts,[cursorX,cursorY]];
+  const n=all.length;
+  if(n<2) return `M${all[0][0]},${all[0][1]}`;
+  let d=`M${all[0][0]},${all[0][1]}`;
+  for(let i=0;i<n-1;i++){
+    const p0=all[Math.max(0,i-1)], p1=all[i], p2=all[i+1], p3=all[Math.min(n-1,i+2)];
+    const cp1x=p1[0]+(p2[0]-p0[0])*tension, cp1y=p1[1]+(p2[1]-p0[1])*tension;
+    const cp2x=p2[0]-(p3[0]-p1[0])*tension, cp2y=p2[1]-(p3[1]-p1[1])*tension;
+    d+=` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+
+// Point-in-polygon (ray casting) for freehand boundaries
+function ptInPoly(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];
+    if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+// Axis-aligned bounding box of a freehand boundary
+function freehandBBox(b){
+  const xs=b.points.map(p=>p[0]), ys=b.points.map(p=>p[1]);
+  const x=Math.min(...xs), y=Math.min(...ys);
+  return {x, y, w:Math.max(...xs)-x, h:Math.max(...ys)-y};
+}
+
 // Check which nodes are geometrically inside a boundary
 function nodesInside(b){
+  if(b.points) return state.nodes.filter(n=>ptInPoly(n.x,n.y,b.points));
   return state.nodes.filter(n=>n.x>=b.x && n.x<=b.x+b.w && n.y>=b.y && n.y<=b.y+b.h);
 }
 
@@ -1697,6 +1819,7 @@ function toggleLock(b){
 
 // Fit boundary to contents (auto-resize to enclose all nodes inside + padding)
 function fitBoundaryToContents(b){
+  if(b.points){toast('Freehand boundaries cannot be auto-fitted');return;}
   const inside=nodesInside(b);
   if(!inside.length){toast('No nodes inside boundary');return;}
   const pad=60;
@@ -2112,7 +2235,10 @@ function countNodeThreats(n){return Object.values(n.props.stride).filter(Boolean
    control effectiveness (D3FEND + applied controls) saturates and reduces residual risk. */
 const SCORE_NORM=(x,k)=>Math.round((1-Math.exp(-x/k))*100);
 function riskLevel(r){return r<25?{l:'Low',c:'var(--ok)'}:r<50?{l:'Medium',c:'var(--warn)'}:r<75?{l:'High',c:'#fb923c'}:{l:'Critical',c:'var(--danger)'};}
-function nodesInBoundary(b){return state.nodes.filter(n=>n.x>b.x&&n.x<b.x+b.w&&n.y>b.y&&n.y<b.y+b.h);}
+function nodesInBoundary(b){
+  if(b.points) return state.nodes.filter(n=>ptInPoly(n.x,n.y,b.points));
+  return state.nodes.filter(n=>n.x>b.x&&n.x<b.x+b.w&&n.y>b.y&&n.y<b.y+b.h);
+}
 function ctrlD3(ct){return ct.d3fend||(NODE_DEFAULTS[ct.type]&&NODE_DEFAULTS[ct.type].d?NODE_DEFAULTS[ct.type].d.map(([id,name])=>({id,name})):[]); }
 function scoreFrom(nodes,edges,bnd){
   const ids=new Set(nodes.map(n=>n.id));
@@ -2121,7 +2247,7 @@ function scoreFrom(nodes,edges,bnd){
   off.forEach(e=>atk+=6+3*((e.attack||[]).length));
   nodes.forEach(n=>{ atk+=2.5*((n.props.attack||[]).length)+1.5*countNodeThreats(n); if(COMPONENTS[n.type].redteam)atk+=5;
     def+=3*((n.props.d3fend||[]).length); (n.props.controls||[]).forEach(ct=>def+=4+1.5*(ctrlD3(ct).length)); if(COMPONENTS[n.type].blueteam)def+=5; });
-  if(bnd){ atk+=4*((bnd.attack||[]).length); def+=4*((bnd.d3fend||[]).length)+({trust:9,netpol:7,namespace:4,privacy:3}[bnd.type]||0); }
+  if(bnd){ atk+=4*((bnd.attack||[]).length); def+=4*((bnd.d3fend||[]).length)+({trust:9,freehand:9,netpol:7,namespace:4,privacy:3}[bnd.type]||0); }
   return {atk,def,off:off.length};
 }
 function boundaryScore(b,k){k=k||26;
@@ -2141,7 +2267,8 @@ function selectNode(id){
 }
 function selectBoundary(id){
   select('boundary',id); renderInspector(); renderBoundaries();
-  const b=byId(state.boundaries,id); if(b) panTo(b.x+b.w/2, b.y+b.h/2);
+  const b=byId(state.boundaries,id);
+  if(b){const bb=b.points?freehandBBox(b):b; panTo(bb.x+bb.w/2, bb.y+bb.h/2);}
 }
 function wireAnalysis(){
   document.querySelectorAll('[data-sel-node]').forEach(el=>{
@@ -2344,6 +2471,7 @@ function renderAnalysis(){
    ===================================================================== */
 let drag=null; // {mode, ...}
 let moveGrab=null; // click-to-grab, click-to-place for boundaries & nodes
+let freePath=null; // {points:[[x,y],...]} — active freehand drawing session
 
 canvas.addEventListener('pointerdown',e=>{
   const w=screenToWorld(e.clientX,e.clientY);
@@ -2368,6 +2496,12 @@ canvas.addEventListener('pointerdown',e=>{
     }
     if(c.kind==='node'){ addNode(armed,w.x,w.y); if(!e.shiftKey)disarm(); return; }
     if(c.kind==='boundary'){ addBoundary(c.bnd,w.x,w.y); if(!e.shiftKey)disarm(); return; }
+    if(c.kind==='freehand'){
+      if(!freePath){ freePath={points:[]}; }
+      freePath.points.push([w.x,w.y]);
+      renderFreePathPreview(w.x,w.y);
+      return;
+    }
     if(c.kind==='edge'||c.kind==='attack'||c.kind==='tunnel_off'||c.kind==='tunnel_def'){
       if(nodeEl){
         const id=nodeEl.dataset.id;
@@ -2396,9 +2530,10 @@ canvas.addEventListener('pointerdown',e=>{
   if(bndEl){
     const id=bndEl.dataset.id; select('boundary',id);
     const b=byId(state.boundaries,id);
+    const bb=b.points?freehandBBox(b):b;
     // standard hold-drag also works
     const inside=b.locked!==false ? nodesInside(b) : [];
-    drag={mode:'boundary',b,dx:w.x-b.x,dy:w.y-b.y,inside,started:false,startW:{x:w.x,y:w.y}}; canvas.setPointerCapture(e.pointerId); return;
+    drag={mode:'boundary',b,dx:w.x-bb.x,dy:w.y-bb.y,lastW:{x:w.x,y:w.y},inside,started:false,startW:{x:w.x,y:w.y}}; canvas.setPointerCapture(e.pointerId); return;
   }
   // --- pan / deselect ---
   select(null);
@@ -2412,6 +2547,8 @@ canvas.addEventListener('pointermove',e=>{
   if(armed&&connectFrom&&(COMPONENTS[armed].kind==='edge'||COMPONENTS[armed].kind==='attack'||COMPONENTS[armed].kind==='tunnel_off'||COMPONENTS[armed].kind==='tunnel_def')){
     const a=nodeAt(connectFrom); if(a)drawTempLine(a.x,a.y,w.x,w.y);
   }
+  // freehand preview
+  if(freePath&&freePath.points.length>0){ renderFreePathPreview(w.x,w.y); }
   // click-to-grab mode: boundary follows cursor without button held
   if(moveGrab){
     const nx=snap(w.x-moveGrab.dx), ny=snap(w.y-moveGrab.dy);
@@ -2429,11 +2566,19 @@ canvas.addEventListener('pointermove',e=>{
       if(Math.hypot(w.x-drag.startW.x, w.y-drag.startW.y)<6) return;
       drag.started=true;
     }
-    const nx=snap(w.x-drag.dx), ny=snap(w.y-drag.dy);
-    const ddx=nx-drag.b.x, ddy=ny-drag.b.y;
-    drag.b.x=nx; drag.b.y=ny;
-    // move contained nodes together (free nodes stay in place)
-    drag.inside.forEach(n=>{if(!n.free){n.x+=ddx; n.y+=ddy;}});
+    if(drag.b.points){
+      // freehand: translate all vertices by delta from last frame
+      const ddx=w.x-drag.lastW.x, ddy=w.y-drag.lastW.y;
+      drag.b.points.forEach(p=>{p[0]+=ddx; p[1]+=ddy;});
+      drag.inside.forEach(n=>{if(!n.free){n.x+=ddx; n.y+=ddy;}});
+      drag.lastW={x:w.x, y:w.y};
+    } else {
+      const nx=snap(w.x-drag.dx), ny=snap(w.y-drag.dy);
+      const ddx=nx-drag.b.x, ddy=ny-drag.b.y;
+      drag.b.x=nx; drag.b.y=ny;
+      // move contained nodes together (free nodes stay in place)
+      drag.inside.forEach(n=>{if(!n.free){n.x+=ddx; n.y+=ddy;}});
+    }
     renderBoundaries(); renderNodes(); renderEdges(); applyPiiZones();
   }
   else if(drag.mode==='resize'){drag.b.w=Math.max(80,snap(w.x-drag.b.x)); drag.b.h=Math.max(60,snap(w.y-drag.b.y)); renderBoundaries(); applyPiiZones();}
@@ -2443,9 +2588,10 @@ canvas.addEventListener('pointermove',e=>{
 canvas.addEventListener('pointerup',e=>{
   if(drag){
     // If boundary was clicked without dragging → enter move-grab mode (click-to-place)
-    if(drag.mode==='boundary'&&!drag.started){
+    if(drag.mode==='boundary'&&!drag.started&&!drag.b.points){
       const w=screenToWorld(e.clientX,e.clientY);
-      moveGrab={b:drag.b, dx:w.x-drag.b.x, dy:w.y-drag.b.y, inside:drag.inside};
+      const bb=drag.b.points?freehandBBox(drag.b):drag.b;
+      moveGrab={b:drag.b, dx:w.x-bb.x, dy:w.y-bb.y, inside:drag.inside};
       showHint('Move boundary — <b>click</b> to place.');
       canvas.classList.remove('panning'); try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
       drag=null; return;
@@ -2457,8 +2603,21 @@ canvas.addEventListener('pointerup',e=>{
   drag=null;
 });
 
-// double-click a flow to toggle offensive; double-click a Kubernetes node to expand it
+// double-click a flow to toggle offensive; double-click a Kubernetes node to expand it; finalize freehand boundary
 canvas.addEventListener('dblclick',e=>{
+  // Finalize freehand polygon
+  if(freePath){
+    // dblclick fires after 2 pointerdown events — remove both bonus points
+    if(freePath.points.length>0) freePath.points.pop();
+    if(freePath.points.length>0) freePath.points.pop();
+    if(freePath.points.length>=3){
+      pushHistory();
+      const b={id:uid('b'), type:'freehand', points:freePath.points, label:'Trust Boundary', d3fend:[], attack:[], notes:'', pii:false};
+      state.boundaries.push(b); select('boundary',b.id);
+    } else { toast('Need at least 3 points to close a boundary'); }
+    freePath=null; clearTempLine(); disarm(); render(); schedSave();
+    return;
+  }
   const edgeEl=e.target.closest('.flow');
   if(edgeEl){const ed=byId(state.edges,edgeEl.dataset.id); ed.offensive=!ed.offensive; render(); toast(ed.offensive?'→ attack vector ⚔':'→ data flow'); return;}
   const nodeEl=e.target.closest('.node');
@@ -2577,6 +2736,7 @@ canvas.addEventListener('drop',e=>{
   const c=COMPONENTS[tool]; const w=screenToWorld(e.clientX,e.clientY);
   if(c.kind==='node')addNode(tool,w.x,w.y);
   else if(c.kind==='boundary')addBoundary(c.bnd,w.x,w.y);
+  else if(c.kind==='freehand'){armTool(tool); return;} // freehand needs interactive drawing — don't disarm below
   else armTool(tool);
   disarm();
 });
@@ -2632,7 +2792,19 @@ function deleteSelected(){
 }
 window.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
-  if(e.key==='Escape'){moveGrab=null; disarm(); closeModal(); select(null);}
+  if(e.key==='Escape'){
+    moveGrab=null;
+    if(freePath){
+      if(freePath.points.length>=3){
+        pushHistory();
+        const b={id:uid('b'), type:'freehand', points:freePath.points, label:'Trust Boundary', d3fend:[], attack:[], notes:'', pii:false};
+        state.boundaries.push(b); select('boundary',b.id); render(); schedSave();
+        toast('Freehand boundary closed');
+      }
+      freePath=null; clearTempLine(); disarm();
+    } else { disarm(); closeModal(); select(null); }
+    return;
+  }
   if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();deleteSelected();}
   if(e.ctrlKey&&e.key==='z'&&!e.shiftKey){e.preventDefault();undo();}
   if(e.ctrlKey&&(e.key==='y'||(e.key==='z'&&e.shiftKey))){e.preventDefault();redo();}
@@ -2749,6 +2921,77 @@ function buildReport(){
    IMPORT / EXPORT / SAMPLE / CLEAR
    ===================================================================== */
 function exportJSON(){download('threat-model.skjaldborg.json',JSON.stringify({v:1,state},null,2),'application/json'); toast('Model exported');}
+
+function exportSVG(){
+  // Compute bbox from content groups only (exclude infinite grid rects)
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  ['g-boundaries','g-edges','g-nodes'].forEach(id=>{
+    const g=document.getElementById(id); if(!g||!g.children.length)return;
+    try{const b=g.getBBox(); minx=Math.min(minx,b.x); miny=Math.min(miny,b.y); maxx=Math.max(maxx,b.x+b.width); maxy=Math.max(maxy,b.y+b.height);}catch(_){}
+  });
+  if(!isFinite(minx)){toast('Nothing to export'); return;}
+  const bb={x:minx,y:miny,width:maxx-minx,height:maxy-miny};
+  const pad=80;
+  const vx=bb.x-pad, vy=bb.y-pad, vw=bb.width+pad*2, vh=bb.height+pad*2;
+
+  // Clone and clean up
+  const svg=document.getElementById('canvas');
+  const clone=svg.cloneNode(true);
+  clone.setAttribute('viewBox',`${vx} ${vy} ${vw} ${vh}`);
+  clone.setAttribute('width',vw); clone.setAttribute('height',vh);
+  clone.removeAttribute('style'); clone.removeAttribute('class');
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+
+  // Background
+  const bgEl=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  bgEl.setAttribute('x',vx); bgEl.setAttribute('y',vy);
+  bgEl.setAttribute('width',vw); bgEl.setAttribute('height',vh);
+  bgEl.setAttribute('fill','#0d0d12');
+  clone.insertBefore(bgEl,clone.firstChild);
+
+  // Remove interactive/grid elements
+  ['grid-rect-s','grid-rect-l','g-temp'].forEach(id=>{
+    const el=clone.getElementById(id); if(el)el.remove();
+  });
+  clone.querySelectorAll('pattern').forEach(p=>p.remove());
+  // Remove resize handles and hit-transparent overlays used only for interaction
+  clone.querySelectorAll('.bnd-resize,.fh-pt').forEach(el=>el.remove());
+
+  // Embed font + resolve CSS variables inline
+  const cs=getComputedStyle(document.documentElement);
+  const cssVars={
+    '--bg-0':'#0a0a0f','--bg-1':'#0d0d12','--bg-2':'#16161e','--bg-3':'#1e1e2a','--bg-4':'#252533',
+    '--txt-0':'#e0e0ec','--txt-1':'#8888a8','--txt-2':'#555570',
+    '--accent':'#a855f7','--accent-hi':'#c084fc','--accent-lo':'#7c3aed',
+    '--cyan':'#38bdf8','--cyan-hi':'#7dd3fc',
+    '--border':'#2a2a3a','--border-hi':'#3a3a50',
+    '--ok':'#22c55e','--warn':'#f59e0b','--danger':'#ef4444',
+    '--offense':'#ef4444','--offense-glow':'#ff6b6b',
+    '--trust':'#38bdf8','--trust-glow':'#7dd3fc',
+    '--privacy':'#22c55e','--privacy-glow':'#4ade80',
+    '--mono':"'JetBrains Mono',Consolas,'Courier New',monospace"
+  };
+  // Override with live computed values where available
+  Object.keys(cssVars).forEach(k=>{
+    const live=cs.getPropertyValue(k).trim(); if(live)cssVars[k]=live;
+  });
+
+  let svgStr=new XMLSerializer().serializeToString(clone);
+
+  // Inject font-face style into defs
+  const fontStyle=`<style>text,tspan{font-family:'JetBrains Mono','Fira Code',Consolas,'Courier New',monospace;}</style>`;
+  svgStr=svgStr.replace('<defs>','<defs>'+fontStyle);
+
+  // Replace var(--xxx) with resolved values
+  Object.entries(cssVars).forEach(([k,v])=>{
+    svgStr=svgStr.split(`var(${k})`).join(v);
+  });
+
+  const label=state.name||'threat-model';
+  download(`skjaldborg-${label}.svg`, svgStr, 'image/svg+xml');
+  toast('SVG exported 🖼');
+}
+
 function importJSON(file){const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);state=o.state||o;select(null);render();fitView();pushHistory();schedSave();toast('Model imported');}catch(_){toast('Invalid file');}};rd.readAsText(file);}
 function download(name,content,mime){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=name;a.click();}
 function clearCanvas(){if(state.nodes.length||state.boundaries.length){if(!confirm('Clear the entire canvas?'))return;}pushHistory();state={nodes:[],edges:[],boundaries:[],seq:1};select(null);render();schedSave();toast('Canvas cleared');}
@@ -3530,6 +3773,7 @@ document.getElementById('btn-pasta').onclick=showPasta;
 document.getElementById('btn-legend').onclick=showLegend;
 document.getElementById('btn-report').onclick=showReport;
 document.getElementById('btn-export').onclick=exportJSON;
+document.getElementById('btn-svg').onclick=exportSVG;
 document.getElementById('btn-sample').onclick=loadSample;
 document.getElementById('btn-undo').onclick=undo;
 document.getElementById('btn-redo').onclick=redo;
