@@ -486,6 +486,7 @@ svg#canvas.panning{cursor:grabbing}
 // --- inline SVG icon paths (drawn inside a node, viewBox 0 0 24 24) ---
 const ICONS = {
   external:'<path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  internet:'<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="12" cy="12" rx="3.8" ry="10" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.3"/><ellipse cx="12" cy="6.5" rx="8.3" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/><ellipse cx="12" cy="17.5" rx="8.3" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/>',
   process:'<path d="M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2L5 19M19 19l-1.8-1.8M6.8 6.8L5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   store:'<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6M4 6c0 1.7 3.6 3 8 3s8-1.3 8-3M4 11c0 1.7 3.6 3 8 3s8-1.3 8-3M4 16c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/>',
   flow:'<path d="M4 12h14M13 6l6 6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -1200,6 +1201,124 @@ const STRIDE_APPLIES = {
   filetransfer:['T','I','D']
 };
 
+// Data classification & encryption metadata
+const DATA_STORE_NODE_TYPES = new Set(['store','bucket','manageddb','cache','secret','configmap','pvc','pv','queue','etcd']);
+const CLASSIFICATION_LEVELS = [
+  {k:'',            label:'— Unclassified —',       color:'var(--txt-2)'},
+  {k:'public',      label:'🟢 Public',               color:'#22c55e'},
+  {k:'internal',    label:'🔵 Internal',             color:'#60a5fa'},
+  {k:'confidential',label:'🟡 Confidential',         color:'#f59e0b'},
+  {k:'restricted',  label:'🟠 Restricted',           color:'#f97316'},
+  {k:'secret',      label:'🔴 Secret / Top Secret',  color:'#ef4444'},
+];
+const DATA_CATEGORIES = [
+  {k:'pii',      label:'Personal (PII)',    color:'#f59e0b', desc:'Names, addresses, IDs, contact details'},
+  {k:'phi',      label:'Health (PHI)',      color:'#ef4444', desc:'Medical records, diagnoses, prescriptions'},
+  {k:'pci',      label:'Financial (PCI)',   color:'#22c55e', desc:'Payment card, bank account, transactions'},
+  {k:'biometric',label:'Biometric',         color:'#a855f7', desc:'Fingerprints, face recognition, retinal'},
+  {k:'comms',    label:'Communications',    color:'#60a5fa', desc:'Emails, messages, call logs'},
+  {k:'legal',    label:'Legal / Criminal',  color:'#f97316', desc:'Court records, criminal history, legal proceedings'},
+];
+
+// OpSec ratings per red-team tool type (1 = very loud / easily detected, 5 = very quiet)
+const OPSEC_RATINGS = {
+  cobalt:      {level:2, label:'Loud',       color:'#f97316', desc:'Default Beacon profiles are heavily signatured by EDR/AV. Malleable C2 profiles and UDRL improve this.'},
+  bruteratel:  {level:3, label:'Medium',     color:'#eab308', desc:'Less common than CS but growing EDR signatures. Custom loaders raise OpSec.'},
+  sliver:      {level:3, label:'Medium',     color:'#eab308', desc:'Open-source C2; detection rules exist in most commercial EDR platforms.'},
+  havoc:       {level:3, label:'Medium',     color:'#eab308', desc:'Growing community; signatures appearing in Defender, CrowdStrike, and Elastic.'},
+  arachne:     {level:4, label:'Quiet',      color:'#84cc16', desc:'Less common; custom WebSocket/HTTP protocol reduces known signature surface.'},
+  adaptix:     {level:4, label:'Quiet',      color:'#84cc16', desc:'Newer framework; limited public detection rules.'},
+  c2custom:    {level:4, label:'Quiet',      color:'#84cc16', desc:'Custom C2; no public signatures — quality depends entirely on implementation.'},
+  redirector:  {level:4, label:'Quiet',      color:'#84cc16', desc:'Hides C2 origin IP; adds attribution difficulty. Only blocked if the redirector IP is burned.'},
+  cdnfront:    {level:5, label:'Very Quiet', color:'#22c55e', desc:'Domain fronting via major CDN; traffic appears as legitimate CDN HTTPS egress. Hard to block without collateral damage.'},
+  legitabuse:  {level:5, label:'Very Quiet', color:'#22c55e', desc:'Abuses legitimate cloud services (OneDrive, Slack, Teams); very hard to block without business impact.'},
+  phishing:    {level:2, label:'Loud',       color:'#f97316', desc:'Email gateways, sandbox detonation, and DMARC catch most commodity phishing campaigns.'},
+  evilginx:    {level:3, label:'Medium',     color:'#eab308', desc:'Proxy-based MFA bypass; detectable by anomalous session metadata, impossible travel, and EvilGinx IoCs.'},
+  gophish:     {level:2, label:'Loud',       color:'#f97316', desc:'Well-known framework; campaign IoCs widely shared in threat intel feeds.'},
+  tangled:     {level:3, label:'Medium',     color:'#eab308', desc:'Moderate signatures; less common than GoPhish.'},
+  phishingclub:{level:3, label:'Medium',     color:'#eab308', desc:'Platform-specific signatures; detectable by URL pattern analysis.'},
+  hwimplant:   {level:5, label:'Very Quiet', color:'#22c55e', desc:'Physical implant bypasses network monitoring entirely. Requires physical access — very high barrier.'},
+  payload:     {level:2, label:'Loud',       color:'#f97316', desc:'Static payloads are signatured immediately. Custom obfuscation, packing, and AMSI bypass required.'},
+  redteam:     {level:3, label:'Medium',     color:'#eab308', desc:'Generic red team operator node.'},
+  grey:        {level:4, label:'Quiet',      color:'#84cc16', desc:'Disposable staging infra with short TTL; reduces exposure window significantly.'},
+  ligolo:      {level:4, label:'Quiet',      color:'#84cc16', desc:'Uncommon tool; detectable by unusual TUN/TAP interface creation and traffic patterns on good NDR.'},
+  sshtunnel:   {level:4, label:'Quiet',      color:'#84cc16', desc:'Looks like legitimate SSH; unusual destination ports or non-standard endpoints may flag NDR.'},
+  chisel:      {level:3, label:'Medium',     color:'#eab308', desc:'HTTP/HTTPS websocket tunnel; detectable by TLS fingerprinting (JA3) and unusual certificate chains.'},
+  sshuttle:    {level:4, label:'Quiet',      color:'#84cc16', desc:'SSH-based VPN tunnel; blends with legitimate SSH traffic.'},
+  socatpivot:  {level:3, label:'Medium',     color:'#eab308', desc:'Well-known utility; detection rules exist for socat spawned as a child process of common apps.'},
+  proxychains: {level:3, label:'Medium',     color:'#eab308', desc:'Behavioral indicators detectable via process command-line analysis.'},
+  rpivot:      {level:4, label:'Quiet',      color:'#84cc16', desc:'Less common reverse SOCKS proxy; limited public signatures.'},
+  dnscat:      {level:3, label:'Medium',     color:'#eab308', desc:'DNS C2 is inspected by CASB/DNS tools; high query volume and unusual record types are anomalous.'},
+  iodine:      {level:3, label:'Medium',     color:'#eab308', desc:'IP-over-DNS; detectable by DNS query analysis tools and anomalous DNS traffic volume.'},
+  lolbin:      {level:5, label:'Very Quiet', color:'#22c55e', desc:'Signed OS/Microsoft binaries — very hard to block without false positives. Requires behavioral heuristics.'},
+  loldriver:   {level:4, label:'Quiet',      color:'#84cc16', desc:'Kernel-level — can blind EDR. Detectable by driver signing and vulnerability analysis (LOLAD).'},
+  filetransfer:{level:3, label:'Medium',     color:'#eab308', desc:'Standard utilities (certutil, bitsadmin, curl); DLP and outbound filtering can catch exfil.'},
+};
+function opsecFor(n){
+  return OPSEC_RATINGS[n.props.toolVariant]||OPSEC_RATINGS[n.type]||{level:3,label:'Medium',color:'#eab308',desc:'No specific OpSec profile for this tool.'};
+}
+
+// Base ease-of-attack score per component type (0 = nearly impossible, 100 = trivial)
+// Derived from: exposure, typical misconfigurations, public exploit availability
+const BASE_EASE = {
+  // External actors — attacker-controlled, not a target
+  external:20,
+  // Core DFD elements
+  process:55, webapp:72, mobileapp:65, api:68, serverless:62,
+  // Data
+  store:52, manageddb:42, bucket:74, queue:58, cache:62, cdn:40,
+  // Identity & access
+  iam:55, ad:68, iamrole:52, sa:52, rbac:45,
+  // Cloud & infra
+  cloud:55, vm:62, docker:65,
+  // Kubernetes
+  k8s:60, k8s_cp:74, etcd:82, k8s_node:60, pod:65,
+  k8s_svc:50, ingress:66, netpol:30, configmap:45,
+  secret:74, pvc:48, pv:45, storageclass:36, namespace:50,
+  crd:44, operator:52, kyverno:30,
+  // Network
+  lb:40, nat_gw:34, vpn_gw:46, proxy:46, sdwan:44,
+  nac:36, firewall:26, waf:30, ids:28, casb:30, dlp:32,
+  dns_srv:54, mail_gw:54,
+  // Blue team (hardened but high-value targets)
+  siem:38, edr:34, ndr:34, asm:36, cnapp:34, cspm:34,
+  hardening:22, deception:16,
+};
+function computeEaseOfAttack(n){
+  const c=COMPONENTS[n.type]||{};
+  if(c.redteam) return null; // attacker infra has no "ease of attack" from defender POV
+  const base=BASE_EASE[n.type]??50;
+  let delta=0;
+  const factors=[];
+  // Offensive edges targeting this node
+  const atkEdges=state.edges.filter(e=>e.offensive&&(e.to===n.id||(e.bidirectional&&e.from===n.id)));
+  if(atkEdges.length){delta+=atkEdges.length*10;factors.push({l:`${atkEdges.length} attack vector(s)`,v:+atkEdges.length*10});}
+  // STRIDE threats flagged (weighted)
+  const SW={S:7,T:5,R:3,I:6,D:4,E:10};
+  let strideD=0; Object.entries(n.props.stride||{}).forEach(([k,v])=>{if(v)strideD+=SW[k]||5;});
+  if(strideD){delta+=strideD;factors.push({l:'STRIDE threats flagged',v:+strideD});}
+  // Privileged container
+  if(n.props.privileged){delta+=14;factors.push({l:'Privileged container',v:+14});}
+  // Security controls reduce ease
+  const ctrls=(n.props.controls||[]).length;
+  if(ctrls){delta-=ctrls*9;factors.push({l:`${ctrls} security control(s)`,v:-ctrls*9});}
+  // D3FEND countermeasures
+  const d3c=(n.props.d3fend||[]).length;
+  if(d3c){delta-=d3c*4;factors.push({l:`${d3c} D3FEND countermeasure(s)`,v:-d3c*4});}
+  // Encryption at rest
+  if(n.props.encryptedAtRest){delta-=12;factors.push({l:'Encrypted at rest',v:-12});}
+  // Encrypted inbound flows
+  const encIn=state.edges.filter(e=>e.encryptedInTransit&&e.to===n.id).length;
+  if(encIn){delta-=encIn*5;factors.push({l:`${encIn} encrypted inbound flow(s)`,v:-encIn*5});}
+  // Manual adjustment
+  const adj=n.props.easeAdjust||0;
+  if(adj)factors.push({l:'Manual adjustment',v:adj});
+  return {value:Math.max(0,Math.min(100,Math.round(base+delta+adj))),base,factors};
+}
+function easeLevel(v){
+  return v<20?{l:'Very Hard',c:'#22c55e'}:v<38?{l:'Hard',c:'#84cc16'}:v<55?{l:'Medium',c:'#eab308'}:v<72?{l:'Easy',c:'#f97316'}:{l:'Critical',c:'#ef4444'};
+}
+
 const PASTA = [
   {n:1,t:'Define Objectives',d:'Business & security objectives, compliance drivers, risk appetite.',m:'Scopes the model — which assets matter and why.'},
   {n:2,t:'Define Technical Scope',d:'Enumerate the architecture: components, infra, dependencies, network.',m:'Your canvas nodes (External, Process, Store, IAM, Cloud, K8s…).'},
@@ -1550,11 +1669,14 @@ function renderNodes(){
       <text class="node-label" y="${R+18}">${esc(n.label)}</text>
       <text class="node-sub" y="${R+31}">${c.label}</text>
       ${badge?`<g transform="translate(${R-6} ${-R+2})"><circle r="9" fill="${badgeCol}"/><text class="node-badge" text-anchor="middle" y="3">${badge}</text></g>`:''}
+      ${rt?(()=>{const det=computeRedTeamDetection(n);const ops=opsecFor(n);const bl=bustRiskLevel(det.bustRisk);const ringC=bl.c;return`<circle r="${R+17}" fill="none" stroke="${ringC}" stroke-width="2" opacity="${det.bustRisk>5?'.55':'.2'}" stroke-dasharray="5 4" style="animation:dashmove ${2+ops.level*.4}s linear infinite reverse"/><g transform="translate(${R-5} ${R-5})"><circle r="9.5" fill="${ringC}" opacity=".9"/><text text-anchor="middle" y="3.5" style="font:bold 7px sans-serif;fill:#000">${det.bustRisk}%</text></g>`;})():''}
       ${rt?`<g transform="translate(${-R+3} ${R-3})"><circle r="8.5" fill="var(--offense)"/><g transform="translate(-5.5 -5.5) scale(.62)">${ICONS.sword}</g></g>`:''}
       ${bt?`<g transform="translate(${-R+3} ${R-3})"><circle r="8.5" fill="var(--trust)"/><g transform="translate(-6 -6) scale(.5)" style="color:#04222e">${ICONS.trust}</g></g>`:''}
       ${ctrl&&!rt&&!bt?`<g transform="translate(${-R+3} ${R-3})"><circle r="9" fill="var(--trust)" stroke="var(--bg-1)" stroke-width="1.5"/><g transform="translate(-6.5 -6.5) scale(.54)" style="color:#04222e">${ICONS.trust}</g><text class="node-badge" x="11" y="-5" style="fill:var(--trust-glow)">${ctrl}</text></g>`:''}
       ${pii&&!rt&&!bt?`<g transform="translate(${-R+4} ${-R+2})"><circle r="9" fill="var(--privacy)"/><g transform="translate(-6 -6) scale(.5)" style="color:#06210f">${ICONS.privacy}</g></g>`:''}
+      ${!rt?(()=>{const ea=computeEaseOfAttack(n);if(!ea)return'';const el=easeLevel(ea.value);return`<g transform="translate(${R-5} ${R-5})" title="Ease of attack: ${ea.value}%"><circle r="9.5" fill="${el.c}" opacity=".88"/><text text-anchor="middle" y="3.5" style="font:bold 7px sans-serif;fill:#000">${ea.value}</text></g>`;})():''}
       ${n.free?`<circle r="${R+16}" fill="none" stroke="#f59e0b" stroke-width="1.5" opacity=".65" stroke-dasharray="3 4"/><g transform="translate(${R-4} ${-R+16})"><circle r="7.5" fill="#f59e0b"/><text text-anchor="middle" y="4" style="font:bold 9px sans-serif;fill:#000">⟐</text></g>`:''}
+      ${n.props.internetExposed?`<g transform="translate(0 ${-(R+1)})"><circle r="9" fill="#3b82f6" stroke="#1e3a8a" stroke-width="1.2" opacity=".95"/><g transform="translate(-5.5 -5.5) scale(.46)" style="color:#fff">${ICONS.internet}</g></g>`:''}
     `;
     g.appendChild(grp);
   });
@@ -1609,10 +1731,13 @@ function renderEdges(){
       // ---- NORMAL EDGE RENDERING ----
       grp.innerHTML=`
         <path d="${p.d}" fill="none" stroke="transparent" stroke-width="16"/>
+        ${e.encryptedInTransit?`<path d="${p.d}" fill="none" stroke="#22c55e" stroke-width="${sel?7:5}" opacity=".18" filter="url(#glow)"/>
+        <path d="${p.d}" fill="none" stroke="#22c55e" stroke-width="${sel?3.5:2.4}" opacity=".45" stroke-dasharray="8 6" style="animation:dashmove 2.4s linear infinite"/>`:''}
         ${off?`<path d="${p.d}" fill="none" stroke="var(--offense-glow)" stroke-width="${sel?5:3.5}" opacity=".25" filter="url(#glow)"/>`:''}
         <path class="flow-anim${off?' off':''}" d="${p.d}" fill="none"
               stroke="${col}" stroke-width="${sel?2.6:1.8}" ${mEnd}${mStart}/>
         ${e.label?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly-8).toFixed(1)}" fill="${off?'#fca5a5':'var(--txt-1)'}">${esc(e.label)}</text>`:''}
+        ${e.encryptedInTransit?`<text class="edge-label" x="${(p.lx+(e.label?38:0)).toFixed(1)}" y="${(p.ly-8).toFixed(1)}" style="font-size:11px">🔐</text>`:''}
         ${off&&!tun?`<g transform="translate(${(p.lx-11).toFixed(1)} ${(p.ly-11).toFixed(1)})"><circle cx="11" cy="11" r="11" fill="var(--offense)"/><g transform="translate(2 2) scale(.78)">${ICONS.sword}</g></g>`:''}
         ${bi&&!tun?`<text class="edge-label" x="${p.lx.toFixed(1)}" y="${(p.ly+(e.label?14:6)).toFixed(1)}" fill="${off?'#fca5a5':'var(--txt-2)'}" style="font-size:8px">⇄ bidirectional</text>`:''}
       `;
@@ -2006,8 +2131,46 @@ function inspectorNode(n){
 
   let banner='', body='';
   if(rt){
-    banner=`<div class="an-card" style="border-color:#ef444455;background:#ef44440f"><h4 style="color:#fca5a5">☠ Adversary infrastructure</h4>
-      <p style="font-size:11px;color:var(--txt-1)">Attacker-owned asset. Map the TTPs it enables (ATT&CK) and how the blue team detects it (D3FEND).</p></div>`;
+    const ops=opsecFor(n);
+    const det=computeRedTeamDetection(n);
+    const bl=bustRiskLevel(det.bustRisk);
+    // OpSec level pips
+    const pips=Array.from({length:5},(_,i)=>`<span style="display:inline-block;width:12px;height:12px;border-radius:3px;margin:0 2px;background:${i<ops.level?ops.color:'var(--bg-3)'}"></span>`).join('');
+    // Detected-by list
+    const detList=det.detectedBy.length
+      ? det.detectedBy.map(d=>{
+          const dc=COMPONENTS[d.node.type]||{}; const ids=d.techniques.map(t=>`<a href="${mitreUrl(t.id,t.name)}" target="_blank" rel="noopener" style="color:var(--trust);font-size:9px"><code>${t.id}</code></a>`).join(' ');
+          return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)">
+            ${iconSvg(dc.icon||'trust','var(--trust)',12)}
+            <span style="font-size:11px;flex:1">${esc(d.node.label)}${d.asControl?` <em style="color:var(--txt-2)">(${esc(d.asControl)})</em>`:''}</span>
+            <span>${ids}</span></div>`;
+        }).join('')
+      : `<div style="font-size:11px;color:var(--txt-2);padding:4px 0">No blue-team tools in this model cover the detection surface.</div>`;
+    // Uncovered D3FEND techniques (gaps)
+    const covered=new Set(det.coveredIds);
+    const gaps=(n.props.d3fend||[]).filter(t=>!covered.has(t.id));
+    const gapList=gaps.length
+      ? `<div style="margin-top:8px"><div style="font-size:10px;color:var(--txt-2);margin-bottom:4px">Detection gaps — not covered by current blue team:</div><div class="chips">${gaps.map(t=>`<a href="${mitreUrl(t.id,t.name)}" target="_blank" rel="noopener" style="text-decoration:none"><span class="chip" style="background:#ef444418;color:#fca5a5;border:1px solid #ef444440"><code>${t.id}</code> ${esc(t.name)}</span></a>`).join('')}</div></div>`
+      : det.detectedBy.length?`<div style="font-size:10.5px;color:var(--ok);margin-top:6px">✓ Full detection surface covered by current blue team.</div>`:'';
+    banner=`<div class="an-card" style="border-color:#ef444455;background:#ef44440f">
+      <h4 style="color:#fca5a5">☠ Adversary infrastructure</h4>
+      <p style="font-size:11px;color:var(--txt-1);margin-bottom:10px">Attacker-owned asset. Map the TTPs it enables (ATT&CK) and model detection exposure below.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="font-size:9.5px;color:var(--txt-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Intrinsic OpSec</div>
+          <div style="display:flex;align-items:center;gap:6px">${pips}<b style="color:${ops.color};font-size:11px">${ops.label}</b></div>
+          <div style="font-size:10px;color:var(--txt-2);margin-top:5px;line-height:1.5">${ops.desc}</div>
+        </div>
+        <div>
+          <div style="font-size:9.5px;color:var(--txt-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Bust likelihood</div>
+          <div style="font-size:18px;font-weight:700;color:${bl.c}">${det.bustRisk}% <span style="font-size:11px;font-weight:600">${bl.l}</span></div>
+          <div style="height:7px;background:var(--bg-3);border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:100%;width:${det.bustRisk}%;background:${bl.c};transition:width .3s"></div></div>
+          <div style="font-size:9.5px;color:var(--txt-2);margin-top:4px">Detection coverage: ${det.coverage}% of ${det.totalTechs} D3FEND technique${det.totalTechs!==1?'s':''}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--txt-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Detected by (${det.detectedBy.length} tool${det.detectedBy.length!==1?'s':''})</div>
+      ${detList}${gapList}
+    </div>`;
     body=attackSec+d3Sec;
   }else if(bt){
     banner=`<div class="an-card" style="border-color:#38bdf855;background:#38bdf80f"><h4 style="color:#7dd3fc">🛡️ Defensive control</h4>
@@ -2028,8 +2191,37 @@ function inspectorNode(n){
       ${controls.length?`<div class="chips">${controls.map(ct=>`<span class="chip def" data-rmctrl="${ct.type}">${iconSvg(COMPONENTS[ct.type].icon,'#7dd3fc',12)} ${esc(ct.label)} <span class="x" title="remove">×</span></span>`).join('')}</div>
         <p style="font-size:10px;color:var(--txt-2);margin-top:5px">D3FEND covered: ${[...new Set(controls.flatMap(ct=>ct.d3fend.map(t=>t.id)))].join(', ')||'—'}</p>`
         :`<div style="font-size:11px;color:var(--txt-2);padding:2px 2px 4px">Arm a <b style="color:var(--trust)">Blue-Team</b> tool, then click this node to protect it.</div>`}`;
+    // Data classification section (store-type nodes only)
+    let dataClassSec = '';
+    if(DATA_STORE_NODE_TYPES.has(n.type)){
+      n.props.classification = n.props.classification||'';
+      n.props.encryptedAtRest = n.props.encryptedAtRest||false;
+      n.props.dataCategories  = n.props.dataCategories||[];
+      const clvl = CLASSIFICATION_LEVELS.find(l=>l.k===n.props.classification)||CLASSIFICATION_LEVELS[0];
+      const catChips = DATA_CATEGORIES.map(dc=>{
+        const on = n.props.dataCategories.includes(dc.k);
+        return `<span class="chip ${on?'def':''}" data-datacat="${dc.k}" title="${dc.desc}"
+          style="${on?`background:${dc.color}22;color:${dc.color};border-color:${dc.color}55`:'background:var(--bg-3);color:var(--txt-2);border:1px solid var(--border);cursor:pointer'};cursor:pointer">
+          ${dc.label}</span>`;
+      }).join('');
+      dataClassSec = `
+        <div class="sec-title">📁 Data Classification</div>
+        <div class="field" style="margin-top:4px">
+          <label>Classification level</label>
+          <select id="f-classification" style="color:${clvl.color}">
+            ${CLASSIFICATION_LEVELS.map(l=>`<option value="${l.k}" ${n.props.classification===l.k?'selected':''}>${l.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Data categories <small style="color:var(--txt-2);font-weight:400">(click to toggle)</small></label>
+          <div class="chips" style="margin-top:6px">${catChips}</div>
+        </div>
+        <label class="switch ${n.props.encryptedAtRest?'on':''}" id="f-enc-rest" style="--offense:var(--ok)">
+          <span>🔐 Encrypted at Rest</span><span class="tg"></span></label>`;
+    }
     body=`<label class="switch ${n.props.pii?'on':''}" id="f-pii" style="--offense:var(--privacy)">
         <span>🔒 Handles PII / sensitive data</span><span class="tg"></span></label>
+      ${dataClassSec}
       ${controlsSec}
       <div class="sec-title">STRIDE assessment <span class="pill">${applies.length} apply</span></div>
       ${stride}${attackSec}${d3Sec}`;
@@ -2056,11 +2248,30 @@ function inspectorNode(n){
     ${banner}
     <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Domain context, assumptions…">${esc(n.props.notes||'')}</textarea></div>
     ${body}
+    ${(()=>{const ea=computeEaseOfAttack(n);if(!ea)return'';const el=easeLevel(ea.value);const adj=n.props.easeAdjust||0;const factorRows=ea.factors.map(f=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:${f.v>0?'#fca5a5':'#86efac'};padding:1px 0"><span>${f.l}</span><b>${f.v>0?'+':''}${f.v}</b></div>`).join('');return`
+    <div class="sec-title">⚡ Ease of Attack</div>
+    <div style="margin:2px 2px 10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div><span style="font-size:20px;font-weight:700;color:${el.c}">${ea.value}</span><span style="font-size:11px;font-weight:600;color:${el.c};margin-left:6px">${el.l}</span></div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <button class="tbtn" id="ease-minus" style="padding:1px 9px;font-size:14px;min-width:28px">−</button>
+          <span style="font-size:10px;color:var(--txt-2);min-width:24px;text-align:center">${adj>0?'+':''}${adj||'±0'}</span>
+          <button class="tbtn" id="ease-plus" style="padding:1px 9px;font-size:14px;min-width:28px">+</button>
+        </div>
+      </div>
+      <div style="height:8px;background:var(--bg-3);border-radius:4px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${ea.value}%;background:${el.c};transition:width .3s"></div>
+      </div>
+      <div style="font-size:10px;color:var(--txt-2);margin-bottom:3px">Base: ${ea.base} (${c.label})${ea.factors.length?'  ·  modifiers:':''}</div>
+      ${factorRows}
+    </div>`;})()}
     <div class="field" style="margin-top:14px"><label>PASTA stage relevance</label>
       <select id="f-pasta"><option value="">—</option>
       ${PASTA.map(p=>`<option value="${p.n}" ${n.props.pasta==p.n?'selected':''}>Stage ${p.n}: ${p.t}</option>`).join('')}</select></div>
 
-    <label class="switch ${n.free?'on':''}" id="f-free" style="--offense:#f59e0b;margin-top:10px">
+    <label class="switch ${n.props.internetExposed?'on':''}" id="f-inet" style="--offense:#3b82f6;margin-top:10px">
+      <span>🌐 Exposed to Internet</span><span class="tg"></span></label>
+    <label class="switch ${n.free?'on':''}" id="f-free" style="--offense:#f59e0b;margin-top:6px">
       <span>⟐ Free movement <small style="color:var(--txt-2)">(no grid snap, ignores boundaries)</small></span><span class="tg"></span></label>
     <button class="del-btn" id="f-del">Delete node</button>`;
 }
@@ -2079,6 +2290,8 @@ function inspectorEdge(e){
     <label class="switch ${e.tunnel?'on':''}" id="f-tunnel">
       <span>🔵 Tunnel / Pivot</span><span class="tg"></span></label>
     <p style="font-size:10.5px;color:var(--txt-2);margin:6px 2px 0">Tunnel edges render as glowing energy streams (red = offensive pivot, blue = legitimate VPN/encrypted).</p>
+    <label class="switch ${e.encryptedInTransit?'on':''}" id="f-enc-transit" style="--offense:var(--ok)">
+      <span>🔐 Encrypted in Transit</span><span class="tg"></span></label>
     <div class="field" style="margin-top:12px"><label>Notes</label><textarea id="f-notes" placeholder="Trust assumption, protocol…">${esc(e.notes||'')}</textarea></div>
 
     <div class="sec-title">🗡️ MITRE ATT&CK <span class="pill">${e.attack.length}</span></div>
@@ -2165,11 +2378,23 @@ function wireInspector(){
   };
   if($('f-label'))$('f-label').oninput=e=>{obj.label=e.target.value; renderNodes(); renderEdges(); renderBoundaries(); schedSave();};
   if($('f-notes'))$('f-notes').oninput=e=>{ (sel.type==='node'?obj.props:obj).notes=e.target.value; schedSave(); };
+  if($('f-inet'))$('f-inet').onclick=()=>{const n=nodeAt(sel.id);n.props.internetExposed=!n.props.internetExposed;renderInspector();renderNodes();schedSave();toast(n.props.internetExposed?'Marked as internet-exposed 🌐':'Internet exposure cleared');};
   if($('f-free'))$('f-free').onclick=()=>{const n=nodeAt(sel.id); n.free=!n.free; renderInspector(); renderNodes(); schedSave(); toast(n.free?'Free movement enabled ⟐':'Snap to grid restored');};
   if($('f-pii'))$('f-pii').onclick=()=>{obj.props.pii=!obj.props.pii; renderInspector(); renderNodes(); renderAnalysis();};
   if($('f-off'))$('f-off').onclick=()=>{obj.offensive=!obj.offensive; renderInspector(); renderEdges(); renderAnalysis();};
   if($('f-bidir'))$('f-bidir').onclick=()=>{obj.bidirectional=!obj.bidirectional; renderInspector(); renderEdges(); renderAnalysis();};
   if($('f-tunnel'))$('f-tunnel').onclick=()=>{obj.tunnel=!obj.tunnel; if(obj.tunnel)obj.bidirectional=true; renderInspector(); renderEdges(); renderAnalysis();};
+  if($('f-enc-transit'))$('f-enc-transit').onclick=()=>{obj.encryptedInTransit=!obj.encryptedInTransit; renderInspector(); schedSave(); toast(obj.encryptedInTransit?'Encrypted in Transit 🔐':'Encryption in transit cleared');};
+  if($('f-classification'))$('f-classification').onchange=e=>{obj.props.classification=e.target.value; const lv=CLASSIFICATION_LEVELS.find(l=>l.k===e.target.value)||CLASSIFICATION_LEVELS[0]; e.target.style.color=lv.color; schedSave();};
+  if($('ease-minus'))$('ease-minus').onclick=()=>{const n=nodeAt(sel.id);if(!n)return;n.props.easeAdjust=(n.props.easeAdjust||0)-5;renderInspector();renderNodes();schedSave();};
+  if($('ease-plus')) $('ease-plus').onclick= ()=>{const n=nodeAt(sel.id);if(!n)return;n.props.easeAdjust=(n.props.easeAdjust||0)+5;renderInspector();renderNodes();schedSave();};
+  if($('f-enc-rest'))$('f-enc-rest').onclick=()=>{obj.props.encryptedAtRest=!obj.props.encryptedAtRest; renderInspector(); schedSave(); toast(obj.props.encryptedAtRest?'Encrypted at Rest 🔐':'Encryption at rest cleared');};
+  document.querySelectorAll('[data-datacat]').forEach(chip=>chip.onclick=()=>{
+    const k=chip.dataset.datacat;
+    const cats=obj.props.dataCategories=obj.props.dataCategories||[];
+    const i=cats.indexOf(k); if(i>=0)cats.splice(i,1); else cats.push(k);
+    renderInspector(); schedSave();
+  });
   if($('f-pasta'))$('f-pasta').onchange=e=>{obj.props.pasta=e.target.value;};
   document.querySelectorAll('[data-stride]').forEach(cb=>cb.onchange=e=>{
     const k=e.target.dataset.stride; obj.props.stride[k]=e.target.checked; renderNodes(); renderAnalysis();
@@ -2286,6 +2511,45 @@ function scoreFrom(nodes,edges,bnd){
   if(bnd){ atk+=4*((bnd.attack||[]).length); def+=4*((bnd.d3fend||[]).length)+({trust:9,freehand:9,netpol:7,namespace:4,privacy:3}[bnd.type]||0); }
   return {atk,def,off:off.length};
 }
+// Compute how much of a red team node's D3FEND detection surface is covered by blue team in the model
+function computeRedTeamDetection(n){
+  const detectTechs=new Set((n.props.d3fend||[]).map(t=>t.id));
+  if(!detectTechs.size) return {coverage:0,bustRisk:0,detectedBy:[],coveredIds:[]};
+  const coveredIds=new Set();
+  const detectedBy=[];
+  state.nodes.forEach(bn=>{
+    const c=COMPONENTS[bn.type]||{};
+    // collect all D3FEND from the blue node itself + controls applied to any node that is this blue node
+    const d3List=[];
+    if(c.blueteam)(bn.props.d3fend||[]).forEach(t=>d3List.push(t));
+    (bn.props.controls||[]).forEach(ct=>ctrlD3(ct).forEach(t=>d3List.push(t)));
+    const hits=d3List.filter(t=>detectTechs.has(t.id));
+    if(hits.length){
+      detectedBy.push({node:bn,techniques:hits});
+      hits.forEach(t=>coveredIds.add(t.id));
+    }
+  });
+  // also scan controls on non-blue nodes
+  state.nodes.forEach(host=>{
+    (host.props.controls||[]).forEach(ct=>{
+      const hits=ctrlD3(ct).filter(t=>detectTechs.has(t.id));
+      hits.forEach(t=>coveredIds.add(t.id));
+      if(hits.length&&!detectedBy.some(d=>d.node.id===host.id)){
+        detectedBy.push({node:host,techniques:hits,asControl:ct.label});
+      }
+    });
+  });
+  const coverage=Math.round(coveredIds.size/detectTechs.size*100);
+  const opsec=opsecFor(n);
+  // bust risk = detection coverage dampened by OpSec level (level 1=loud → full weight, level 5=quiet → 40% weight)
+  const opsecMult=[0,1.0,0.82,0.65,0.50,0.40][opsec.level]||0.65;
+  const bustRisk=Math.round(coverage*opsecMult);
+  return {coverage,bustRisk,detectedBy,coveredIds:[...coveredIds],totalTechs:detectTechs.size};
+}
+function bustRiskLevel(r){
+  return r<20?{l:'Unlikely',c:'#22c55e'}:r<45?{l:'Possible',c:'#84cc16'}:r<65?{l:'Likely',c:'#eab308'}:r<80?{l:'High',c:'#f97316'}:{l:'Critical',c:'#ef4444'};
+}
+
 function boundaryScore(b,k){k=k||26;
   const ins=nodesInBoundary(b); const r=scoreFrom(ins,state.edges,b);
   const A=SCORE_NORM(r.atk,k), D=SCORE_NORM(r.def,k);
@@ -2710,16 +2974,71 @@ canvas.addEventListener('contextmenu',e=>{
     const n=nodeAt(nodeEl.dataset.id);
     if(!n)return;
     select('node',n.id);
+    const c=COMPONENTS[n.type]||{};
+
     items.push({icon:'✏️', label:'Rename', action:'rename', key:'F2'});
     items.push({icon:'📋', label:'Duplicate', action:'duplicate'});
+    items.push('---');
+
+    // ── Semantic items based on component type ──
+    const DATA_STORE_TYPES=new Set(['store','bucket','manageddb','cache','secret','configmap','pvc','pv','queue']);
+    const PROCESS_TYPES=new Set(['process','webapp','mobileapp','api','serverless']);
+    const IAM_TYPES=new Set(['iam','ad','iamrole','sa','rbac']);
+    const K8S_WORKLOAD=new Set(['pod','k8s_node']);
+
+    const strideToggle=(k)=>{
+      const s=STRIDE.find(x=>x.k===k);
+      const on=n.props.stride[k];
+      items.push({icon:on?'✅':'⚠️', label:`${on?'Clear':'Flag'} ${s.k} — ${s.name}`, action:`stride_${k}`});
+      ctxHandlers[`stride_${k}`]=()=>{ pushHistory(); n.props.stride[k]=!n.props.stride[k]; render(); schedSave(); toast(`${s.k} ${n.props.stride[k]?'flagged ⚠️':'cleared'} on ${n.label}`); };
+    };
+
+    if(DATA_STORE_TYPES.has(n.type)){
+      items.push({icon:n.props.pii?'🔓':'🔒', label:n.props.pii?'Clear PII / sensitive flag':'Mark as PII / sensitive data', action:'toggle_pii'});
+      ctxHandlers.toggle_pii=()=>{ pushHistory(); n.props.pii=!n.props.pii; render(); schedSave(); toast(n.props.pii?`${n.label} marked as PII 🔒`:`PII flag cleared`); };
+      const enc=n.props.encryptedAtRest;
+      items.push({icon:enc?'🔓':'🔐', label:enc?'Clear encrypted at rest':'Mark encrypted at rest', action:'toggle_enc_rest'});
+      ctxHandlers.toggle_enc_rest=()=>{ pushHistory(); n.props.encryptedAtRest=!n.props.encryptedAtRest; renderInspector(); schedSave(); toast(n.props.encryptedAtRest?`${n.label} — encrypted at rest 🔐`:`Encryption at rest cleared`); };
+      const cl=n.props.classification||'';
+      const nextCl=CLASSIFICATION_LEVELS[(CLASSIFICATION_LEVELS.findIndex(l=>l.k===cl)+1)%CLASSIFICATION_LEVELS.length];
+      items.push({icon:'📁', label:`Classification: ${cl?CLASSIFICATION_LEVELS.find(l=>l.k===cl).label:'Unclassified'} → cycle`, action:'cycle_class'});
+      ctxHandlers.cycle_class=()=>{ pushHistory(); n.props.classification=nextCl.k; renderInspector(); schedSave(); toast(`Classification → ${nextCl.label}`); };
+      strideToggle('I'); // Information Disclosure most relevant for stores
+      strideToggle('T'); // Tampering
+    } else if(n.type==='external'){
+      strideToggle('S'); // Spoofing — canonical threat from external actors
+      strideToggle('R'); // Repudiation
+    } else if(IAM_TYPES.has(n.type)){
+      strideToggle('E'); // Elevation of Privilege — primary IAM threat
+      strideToggle('T'); // Tampering
+      strideToggle('R'); // Repudiation
+    } else if(PROCESS_TYPES.has(n.type)){
+      const applies=(typeof STRIDE_APPLIES!=='undefined'&&STRIDE_APPLIES[n.type])||['S','T','R','I','D','E'];
+      applies.slice(0,3).forEach(k=>strideToggle(k));
+    } else if(K8S_WORKLOAD.has(n.type)){
+      const priv=n.props.privileged;
+      items.push({icon:priv?'🔓':'⚠️', label:priv?'Unmark privileged container':'Mark as privileged container', action:'toggle_priv'});
+      ctxHandlers.toggle_priv=()=>{ pushHistory(); n.props.privileged=!n.props.privileged; render(); schedSave(); toast(`${n.label} ${n.props.privileged?'marked as privileged ⚠️':'privilege flag cleared'}`); };
+      strideToggle('E');
+    } else if(c.blueteam){
+      const ctrls=n.props.controls||[];
+      if(ctrls.length){
+        items.push({icon:'🧹', label:`Clear all controls (${ctrls.length})`, action:'clear_controls'});
+        ctxHandlers.clear_controls=()=>{ pushHistory(); n.props.controls=[]; render(); schedSave(); toast(`Controls cleared from ${n.label}`); };
+      }
+    }
+
+    if(!c.redteam&&!c.blueteam){
+      items.push({icon:n.props.internetExposed?'🔒':'🌐', label:n.props.internetExposed?'Remove internet exposure':'Mark as internet-exposed', action:'toggle_inet'});
+      ctxHandlers.toggle_inet=()=>{pushHistory();n.props.internetExposed=!n.props.internetExposed;render();schedSave();toast(n.props.internetExposed?`${n.label} — internet-exposed 🌐`:`Internet exposure cleared`);};
+    }
     items.push('---');
     items.push({icon:'⚔️', label:'Toggle offensive flag', action:'toggle_off'});
     items.push('---');
     items.push({icon:'🗑️', label:'Delete', action:'delete', danger:true, key:'Del'});
     ctxHandlers.rename=()=>{const lbl=prompt('Rename node:',n.label); if(lbl!==null){n.label=lbl; render();}};
     ctxHandlers.duplicate=()=>{const dn=addNodeSilent(n.type,n.x+55,n.y+55);dn.label=n.label+' (copy)';render();toast('Node duplicated');};
-    ctxHandlers.toggle_off=()=>{/* toggle attack on edges from this node */
-      state.edges.filter(ed=>ed.from===n.id||ed.to===n.id).forEach(ed=>{ed.offensive=!ed.offensive;});render();};
+    ctxHandlers.toggle_off=()=>{state.edges.filter(ed=>ed.from===n.id||ed.to===n.id).forEach(ed=>{ed.offensive=!ed.offensive;});render();};
     ctxHandlers.delete=()=>deleteSelected();
   } else if(bndEl){
     const b=byId(state.boundaries,bndEl.dataset.id);
@@ -2744,6 +3063,8 @@ canvas.addEventListener('contextmenu',e=>{
     items.push({icon:'✏️', label:'Rename flow', action:'rename'});
     items.push({icon:'⚔️', label:ed.offensive?'Make data flow':'Make attack vector', action:'toggle_off'});
     items.push({icon:'⇄', label:ed.bidirectional?'Make unidirectional':'Make bidirectional', action:'toggle_bidir'});
+    items.push({icon:ed.encryptedInTransit?'🔓':'🔐', label:ed.encryptedInTransit?'Clear encrypted in transit':'Mark encrypted in transit', action:'toggle_enc_transit'});
+    ctxHandlers.toggle_enc_transit=()=>{ pushHistory(); ed.encryptedInTransit=!ed.encryptedInTransit; renderInspector(); renderEdges(); schedSave(); toast(ed.encryptedInTransit?'Encrypted in Transit 🔐':'Encryption in transit cleared'); };
     items.push('---');
     items.push({icon:'🗑️', label:'Delete flow', action:'delete', danger:true});
     ctxHandlers.rename=()=>{const lbl=prompt('Flow label:',ed.label); if(lbl!==null){ed.label=lbl; render();}};
@@ -2959,41 +3280,233 @@ function buildReport(){
 function exportJSON(){download('threat-model.skjaldborg.json',JSON.stringify({v:1,state},null,2),'application/json'); toast('Model exported');}
 
 function exportSVG(){
-  // Compute bbox from content groups only (exclude infinite grid rects)
   let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
   ['g-boundaries','g-edges','g-nodes'].forEach(id=>{
     const g=document.getElementById(id); if(!g||!g.children.length)return;
     try{const b=g.getBBox(); minx=Math.min(minx,b.x); miny=Math.min(miny,b.y); maxx=Math.max(maxx,b.x+b.width); maxy=Math.max(maxy,b.y+b.height);}catch(_){}
   });
   if(!isFinite(minx)){toast('Nothing to export'); return;}
-  const bb={x:minx,y:miny,width:maxx-minx,height:maxy-miny};
-  const pad=80;
-  const vx=bb.x-pad, vy=bb.y-pad, vw=bb.width+pad*2, vh=bb.height+pad*2;
 
-  // Clone and clean up
+  const pad=80;
+  const dX=minx-pad, dY=miny-pad, dW=maxx-minx+pad*2, dH=maxy-miny+pad*2;
+
+  // --- Collect analysis data ---
+  const atkMap=new Map(), defMap=new Map();
+  state.nodes.forEach(n=>{
+    (n.props.attack||[]).forEach(t=>atkMap.set(t.id,t.name));
+    (n.props.d3fend||[]).forEach(t=>defMap.set(t.id,t.name));
+    (n.props.controls||[]).forEach(ct=>ctrlD3(ct).forEach(t=>defMap.set(t.id,t.name)));
+  });
+  state.edges.forEach(e=>(e.attack||[]).forEach(t=>atkMap.set(t.id,t.name)));
+  state.boundaries.forEach(b=>{
+    (b.attack||[]).forEach(t=>atkMap.set(t.id,t.name));
+    (b.d3fend||[]).forEach(t=>defMap.set(t.id,t.name));
+  });
+  const strideCounts={S:0,T:0,R:0,I:0,D:0,E:0};
+  state.nodes.forEach(n=>Object.entries(n.props.stride||{}).forEach(([k,v])=>{if(v)strideCounts[k]=(strideCounts[k]||0)+1;}));
+  const classCounts={};
+  state.nodes.forEach(n=>{if(n.props.classification)classCounts[n.props.classification]=(classCounts[n.props.classification]||0)+1;});
+  const piiNodes=state.nodes.filter(n=>n.props.pii);
+  const rtNodes=state.nodes.filter(n=>(COMPONENTS[n.type]||{}).redteam);
+  const btNodes=state.nodes.filter(n=>(COMPONENTS[n.type]||{}).blueteam);
+  const encTransitCount=state.edges.filter(e=>e.encryptedInTransit).length;
+  const encRestCount=state.nodes.filter(n=>n.props.encryptedAtRest).length;
+  function safeStr(s){return s.replace(/[^\x00-\xFF]/g,'').trim();}
+
+  // --- SVG helpers ---
+  const PW=400, PG=50, PP=16;
+  const fam="'JetBrains Mono',Consolas,monospace";
+  const pX=dX+dW+PG, pY=dY;
+  function svgt(x,y,content,sz,fill,weight='normal',anchor='start'){
+    return `<text x="${x}" y="${y}" font-size="${sz}" fill="${fill}" font-weight="${weight}" text-anchor="${anchor}" font-family="${fam}">${content}</text>`;
+  }
+  function sHdr(y,label,color){
+    return svgt(pX+PP,y,label,9,color,'bold')+
+      `<line x1="${pX+PP}" y1="${y+4}" x2="${pX+PW-PP}" y2="${y+4}" stroke="${color}" stroke-width=".5" opacity=".4"/>`;
+  }
+  function sBar(x,y,val,color,label,bw){
+    const f=Math.round(bw*Math.min(100,Math.max(0,val))/100);
+    return svgt(x,y,label,9,'#b0b0cc')+
+      `<rect x="${x+100}" y="${y-9}" width="${bw}" height="7" fill="#1a1a24" rx="2"/>` +
+      `<rect x="${x+100}" y="${y-9}" width="${f}" height="7" fill="${color}" rx="2" opacity=".8"/>` +
+      svgt(x+100+bw+5,y,val+'%',8,color);
+  }
+
+  // --- Build panel content ---
+  let pc=''; let cy=pY+PP;
+  cy+=18;
+  pc+=svgt(pX+PP,cy,'THREAT ANALYSIS REPORT',14,'#e0e0ec','bold');
+  cy+=15;
+  pc+=svgt(pX+PP,cy,esc(state.name||'Unnamed Model'),10,'#aaaacc');
+  cy+=8;
+  pc+=`<line x1="${pX+PP}" y1="${cy}" x2="${pX+PW-PP}" y2="${cy}" stroke="#2a2a3a" stroke-width="1"/>`;
+  cy+=16;
+
+  pc+=sHdr(cy,'Summary','#a855f7'); cy+=18;
+  for(const [lbl,val] of [
+    ['Nodes',state.nodes.length],['Edges',state.edges.length],['Boundaries',state.boundaries.length],
+    ['ATT&amp;CK techniques',atkMap.size],['D3FEND techniques',defMap.size],
+    ['Red team nodes',rtNodes.length],['Blue team controls',btNodes.length],
+    ['Encrypted flows',encTransitCount],['Encrypted at rest',encRestCount],
+  ]){
+    pc+=svgt(pX+PP,cy,lbl,9,'#b0b0cc');
+    pc+=svgt(pX+PW-PP,cy,String(val),9,'#e8e8f8','bold','end');
+    cy+=13;
+  }
+  cy+=8;
+
+  pc+=sHdr(cy,'STRIDE Threat Analysis','#38bdf8'); cy+=18;
+  const strideInfo={S:{n:'Spoofing',c:'#ef4444'},T:{n:'Tampering',c:'#f97316'},R:{n:'Repudiation',c:'#eab308'},I:{n:'Info Disclosure',c:'#a855f7'},D:{n:'Denial of Service',c:'#38bdf8'},E:{n:'Elevation of Priv.',c:'#ff6b6b'}};
+  const totalN=Math.max(1,state.nodes.length);
+  const bw=PW-PP*2-110;
+  for(const [k,info] of Object.entries(strideInfo)){
+    const cnt=strideCounts[k]||0;
+    const pct=Math.round(cnt/totalN*100);
+    pc+=sBar(pX+PP,cy,pct,info.c,`${k} ${info.n.substring(0,14)}`,bw);
+    pc+=svgt(pX+PP+100+bw+36,cy,`${cnt}/${totalN}`,8,'#9090b0');
+    cy+=16;
+  }
+  cy+=8;
+
+  const classLevels=CLASSIFICATION_LEVELS.filter(cl=>cl.k&&classCounts[cl.k]);
+  if(classLevels.length||piiNodes.length){
+    pc+=sHdr(cy,'Data Classification','#22c55e'); cy+=18;
+    for(const cl of classLevels){
+      pc+=svgt(pX+PP,cy,safeStr(cl.label)+':',9,'#c0c0dc');
+      pc+=svgt(pX+PW-PP,cy,classCounts[cl.k]+' node(s)',9,cl.color||'#e8e8f8','bold','end');
+      cy+=13;
+    }
+    if(piiNodes.length){
+      pc+=svgt(pX+PP,cy,'PII assets: '+piiNodes.length,9,'#f59e0b','bold');
+      cy+=12;
+      for(const n of piiNodes.slice(0,5)){pc+=svgt(pX+PP+10,cy,'- '+esc(n.label.substring(0,30)),8,'#d97706'); cy+=12;}
+      if(piiNodes.length>5){pc+=svgt(pX+PP+10,cy,'... and '+(piiNodes.length-5)+' more',8,'#9090b8'); cy+=12;}
+    }
+    cy+=8;
+  }
+
+  if(atkMap.size){
+    pc+=sHdr(cy,'MITRE ATT&amp;CK Techniques ('+atkMap.size+')','#ef4444'); cy+=18;
+    let i=0;
+    for(const [id,nm] of atkMap){
+      pc+=svgt(pX+PP,cy,id,9,'#f87171','bold');
+      pc+=svgt(pX+PP+60,cy,esc(nm.substring(0,34)),9,'#e8e8f8');
+      cy+=13; i++;
+      if(i>=14&&atkMap.size>15){pc+=svgt(pX+PP,cy,'... and '+(atkMap.size-14)+' more',8,'#9090b8'); cy+=13; break;}
+    }
+    cy+=8;
+  }
+
+  if(defMap.size){
+    pc+=sHdr(cy,'MITRE D3FEND Coverage ('+defMap.size+')','#38bdf8'); cy+=18;
+    let i=0;
+    for(const [id,nm] of defMap){
+      pc+=svgt(pX+PP,cy,id,9,'#7dd3fc','bold');
+      pc+=svgt(pX+PP+85,cy,esc(nm.substring(0,32)),9,'#e8e8f8');
+      cy+=13; i++;
+      if(i>=14&&defMap.size>15){pc+=svgt(pX+PP,cy,'... and '+(defMap.size-14)+' more',8,'#9090b8'); cy+=13; break;}
+    }
+    cy+=8;
+  }
+
+  if(rtNodes.length){
+    pc+=sHdr(cy,'Red Team OpSec Assessment','#ff6b6b'); cy+=18;
+    let cnt=0;
+    for(const n of rtNodes){
+      if(cnt>=12){pc+=svgt(pX+PP,cy,'... and '+(rtNodes.length-12)+' more',8,'#9090b8'); cy+=13; break;}
+      const det=computeRedTeamDetection(n); const ops=opsecFor(n); const bl=bustRiskLevel(det.bustRisk);
+      pc+=svgt(pX+PP,cy,esc(n.label.substring(0,18)),9,'#e8e8f8','bold');
+      pc+=svgt(pX+PP+132,cy,'L'+ops.level+' '+(safeStr(ops.label||'')),9,ops.color||'#8888a8');
+      pc+=svgt(pX+PP+200,cy,'Bust: '+det.bustRisk+'% '+bl.l,9,bl.c);
+      cy+=13; cnt++;
+    }
+    cy+=8;
+  }
+
+  const nonRT=state.nodes.filter(n=>!(COMPONENTS[n.type]||{}).redteam);
+  if(nonRT.length){
+    pc+=sHdr(cy,'Ease of Attack — Node Breakdown','#a855f7'); cy+=18;
+    let cnt=0;
+    for(const n of nonRT){
+      if(cnt>=20){pc+=svgt(pX+PP,cy,'... and '+(nonRT.length-20)+' more',8,'#9090b8'); cy+=13; break;}
+      const ea=computeEaseOfAttack(n); if(!ea){cnt++;continue;}
+      const el=easeLevel(ea.value);
+      const activeStride=Object.entries(n.props.stride||{}).filter(([,v])=>v).map(([k])=>k);
+      const cl=CLASSIFICATION_LEVELS.find(x=>x.k===n.props.classification);
+      pc+=svgt(pX+PP,cy,esc(n.label.substring(0,16)),9,'#e8e8f8','bold');
+      pc+=svgt(pX+PP+122,cy,ea.value+'',10,el.c,'bold');
+      pc+=svgt(pX+PP+148,cy,'('+el.l+')',9,el.c);
+      if(activeStride.length)pc+=svgt(pX+PP+240,cy,activeStride.join(' '),9,'#f59e0b');
+      if(cl&&cl.k)pc+=svgt(pX+PW-PP,cy,safeStr(cl.label),8,cl.color||'#8888a8','normal','end');
+      cy+=13; cnt++;
+    }
+    cy+=8;
+  }
+
+  pc+=`<line x1="${pX+PP}" y1="${cy}" x2="${pX+PW-PP}" y2="${cy}" stroke="#2a2a3a" stroke-width="1"/>`;
+  cy+=13;
+  pc+=svgt(pX+PP,cy,'PurpleSkjaldborg  |  '+new Date().toISOString().split('T')[0],8,'#8080a0');
+  cy+=20;
+
+  const panelH=cy-pY;
+  const totalH=Math.max(dH,panelH);
+  const panelSVG=
+    `<rect x="${pX}" y="${pY}" width="${PW}" height="${totalH}" fill="#0c0c14" rx="6"/>` +
+    `<rect x="${pX}" y="${pY}" width="${PW}" height="${totalH}" fill="none" stroke="#2a2a3a" stroke-width="1" rx="6"/>` +
+    pc;
+
+  // --- Node detail annotations in diagram space ---
+  let annotSVG=`<g id="g-annot" font-family="${fam}">`;
+  for(const n of state.nodes){
+    const c=COMPONENTS[n.type]||{};
+    const R=n.r||32;
+    const ax=n.x+R+8, ay=n.y-28;
+    const lines=[];
+    if(!c.redteam){
+      const ea=computeEaseOfAttack(n);
+      if(ea){const el=easeLevel(ea.value);lines.push({t:'Ease: '+ea.value+' ('+el.l+')',c:el.c});}
+    } else {
+      const det=computeRedTeamDetection(n); const bl=bustRiskLevel(det.bustRisk); const ops=opsecFor(n);
+      lines.push({t:'Bust: '+det.bustRisk+'% ('+bl.l+')',c:bl.c});
+      lines.push({t:'OpSec: L'+ops.level+' '+(safeStr(ops.label||'')),c:ops.color||'#8888a8'});
+    }
+    const cl=CLASSIFICATION_LEVELS.find(x=>x.k===n.props.classification);
+    if(cl&&cl.k)lines.push({t:safeStr(cl.label),c:cl.color||'#e8e8f8'});
+    if(n.props.encryptedAtRest)lines.push({t:'Encrypted at rest',c:'#22c55e'});
+    const atkCnt=(n.props.attack||[]).length;
+    if(atkCnt)lines.push({t:'ATT&amp;CK: '+atkCnt+' technique'+(atkCnt>1?'s':''),c:'#f87171'});
+    const activeStride=Object.entries(n.props.stride||{}).filter(([,v])=>v).map(([k])=>k);
+    if(activeStride.length)lines.push({t:'STRIDE: '+activeStride.join(' '),c:'#f59e0b'});
+    if(!lines.length)continue;
+    const boxW=178, lineH=12, boxPad=5;
+    const boxH=lines.length*lineH+boxPad*2-1;
+    annotSVG+=`<g opacity=".9"><rect x="${ax}" y="${ay}" width="${boxW}" height="${boxH}" fill="#080810" stroke="#252535" stroke-width=".8" rx="3"/>`;
+    lines.forEach((ln,i)=>{
+      annotSVG+=`<text x="${ax+5}" y="${ay+boxPad+lineH*(i+1)-2}" font-size="8.5" fill="${ln.c}" font-family="${fam}">${esc(ln.t)}</text>`;
+    });
+    annotSVG+='</g>';
+  }
+  annotSVG+='</g>';
+
+  // --- Clone and assemble SVG ---
   const svg=document.getElementById('canvas');
   const clone=svg.cloneNode(true);
-  clone.setAttribute('viewBox',`${vx} ${vy} ${vw} ${vh}`);
-  clone.setAttribute('width',vw); clone.setAttribute('height',vh);
+  const totalW=dW+PG+PW;
+  clone.setAttribute('viewBox',`${dX} ${dY} ${totalW} ${totalH}`);
+  clone.setAttribute('width',totalW); clone.setAttribute('height',totalH);
   clone.removeAttribute('style'); clone.removeAttribute('class');
   clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
 
-  // Background
   const bgEl=document.createElementNS('http://www.w3.org/2000/svg','rect');
-  bgEl.setAttribute('x',vx); bgEl.setAttribute('y',vy);
-  bgEl.setAttribute('width',vw); bgEl.setAttribute('height',vh);
-  bgEl.setAttribute('fill','#0d0d12');
+  bgEl.setAttribute('x',dX); bgEl.setAttribute('y',dY);
+  bgEl.setAttribute('width',totalW); bgEl.setAttribute('height',totalH);
+  bgEl.setAttribute('fill','#0a0a0f');
   clone.insertBefore(bgEl,clone.firstChild);
 
-  // Remove interactive/grid elements
-  ['grid-rect-s','grid-rect-l','g-temp'].forEach(id=>{
-    const el=clone.getElementById(id); if(el)el.remove();
-  });
+  ['grid-rect-s','grid-rect-l','g-temp'].forEach(id=>{const el=clone.getElementById(id); if(el)el.remove();});
   clone.querySelectorAll('pattern').forEach(p=>p.remove());
-  // Remove resize handles and hit-transparent overlays used only for interaction
   clone.querySelectorAll('.bnd-resize,.fh-pt').forEach(el=>el.remove());
 
-  // Embed font + resolve CSS variables inline
   const cs=getComputedStyle(document.documentElement);
   const cssVars={
     '--bg-0':'#0a0a0f','--bg-1':'#0d0d12','--bg-2':'#16161e','--bg-3':'#1e1e2a','--bg-4':'#252533',
@@ -3007,25 +3520,69 @@ function exportSVG(){
     '--privacy':'#22c55e','--privacy-glow':'#4ade80',
     '--mono':"'JetBrains Mono',Consolas,'Courier New',monospace"
   };
-  // Override with live computed values where available
-  Object.keys(cssVars).forEach(k=>{
-    const live=cs.getPropertyValue(k).trim(); if(live)cssVars[k]=live;
-  });
+  Object.keys(cssVars).forEach(k=>{const live=cs.getPropertyValue(k).trim(); if(live)cssVars[k]=live;});
 
   let svgStr=new XMLSerializer().serializeToString(clone);
-
-  // Inject font-face style into defs
-  const fontStyle=`<style>text,tspan{font-family:'JetBrains Mono','Fira Code',Consolas,'Courier New',monospace;}</style>`;
+  const fontStyle=`<style>
+text,tspan{font-family:'JetBrains Mono','Fira Code',Consolas,'Courier New',monospace;}
+.node-label{font:600 12px 'JetBrains Mono',Consolas,monospace;fill:var(--txt-0);text-anchor:middle;paint-order:stroke;stroke:var(--bg-1);stroke-width:3px}
+.node-sub{font:10px 'JetBrains Mono',Consolas,monospace;fill:var(--txt-0);text-anchor:middle}
+.node-badge{font:700 9px 'JetBrains Mono',Consolas,monospace;fill:#fff}
+.bnd-label{font:600 11px 'JetBrains Mono',Consolas,monospace;fill:var(--txt-0)}
+.edge-label{font:10px 'JetBrains Mono',Consolas,monospace;fill:var(--txt-0)}
+</style>`;
   svgStr=svgStr.replace('<defs>','<defs>'+fontStyle);
+  Object.entries(cssVars).forEach(([k,v])=>{svgStr=svgStr.split(`var(${k})`).join(v);});
+  const zoomScript='<script type="text/javascript"><![CDATA[\n'+
+'(function(){\n'+
+'  var svg=document.documentElement;\n'+
+'  var vb=svg.viewBox.baseVal;\n'+
+'  var vx=vb.x,vy=vb.y,vw=vb.width,vh=vb.height;\n'+
+'  var drag=false,sx=0,sy=0,svx=0,svy=0;\n'+
+'  function setVB(){svg.setAttribute("viewBox",vx+" "+vy+" "+vw+" "+vh);}\n'+
+'  svg.addEventListener("wheel",function(e){\n'+
+'    e.preventDefault();\n'+
+'    var r=e.deltaY>0?1.12:0.88;\n'+
+'    var rc=svg.getBoundingClientRect();\n'+
+'    var mx=(e.clientX-rc.left)/rc.width*vw+vx;\n'+
+'    var my=(e.clientY-rc.top)/rc.height*vh+vy;\n'+
+'    vx=mx-(mx-vx)*r; vy=my-(my-vy)*r; vw*=r; vh*=r; setVB();\n'+
+'  },{passive:false});\n'+
+'  svg.addEventListener("mousedown",function(e){\n'+
+'    if(e.button!==0)return; drag=true; sx=e.clientX; sy=e.clientY; svx=vx; svy=vy;\n'+
+'    svg.style.cursor="grabbing";\n'+
+'  });\n'+
+'  window.addEventListener("mousemove",function(e){\n'+
+'    if(!drag)return;\n'+
+'    var rc=svg.getBoundingClientRect();\n'+
+'    vx=svx-(e.clientX-sx)/rc.width*vw;\n'+
+'    vy=svy-(e.clientY-sy)/rc.height*vh; setVB();\n'+
+'  });\n'+
+'  window.addEventListener("mouseup",function(){drag=false; svg.style.cursor="default";});\n'+
+'  var zi=document.getElementById("zoom-in");\n'+
+'  var zo=document.getElementById("zoom-out");\n'+
+'  var zr=document.getElementById("zoom-reset");\n'+
+'  if(zr)zr.addEventListener("click",function(){vx=vb.x;vy=vb.y;vw=vb.width;vh=vb.height;setVB();});\n'+
+'  if(zi)zi.addEventListener("click",function(){var cx=vx+vw/2,cy2=vy+vh/2;vw*=0.8;vh*=0.8;vx=cx-vw/2;vy=cy2-vh/2;setVB();});\n'+
+'  if(zo)zo.addEventListener("click",function(){var cx=vx+vw/2,cy2=vy+vh/2;vw*=1.25;vh*=1.25;vx=cx-vw/2;vy=cy2-vh/2;setVB();});\n'+
+'})();\n'+
+']]>'+'<'+'/script>';
 
-  // Replace var(--xxx) with resolved values
-  Object.entries(cssVars).forEach(([k,v])=>{
-    svgStr=svgStr.split(`var(${k})`).join(v);
-  });
+  const zoomUI=`<g id="zoom-controls" style="pointer-events:all">
+  <rect x="${dX+12}" y="${dY+12}" width="96" height="28" rx="6" fill="#16161e" stroke="#2a2a3a" stroke-width="1"/>
+  <rect id="zoom-in"  x="${dX+14}" y="${dY+14}" width="26" height="24" rx="4" fill="#252533" style="cursor:pointer"/>
+  <text x="${dX+27}" y="${dY+31}" text-anchor="middle" font-size="16" fill="#e0e0ec" font-family="monospace" style="pointer-events:none">+</text>
+  <rect id="zoom-out" x="${dX+42}" y="${dY+14}" width="26" height="24" rx="4" fill="#252533" style="cursor:pointer"/>
+  <text x="${dX+55}" y="${dY+31}" text-anchor="middle" font-size="16" fill="#e0e0ec" font-family="monospace" style="pointer-events:none">−</text>
+  <rect id="zoom-reset" x="${dX+70}" y="${dY+14}" width="36" height="24" rx="4" fill="#252533" style="cursor:pointer"/>
+  <text x="${dX+88}" y="${dY+31}" text-anchor="middle" font-size="10" fill="#e0e0ec" font-family="monospace" style="pointer-events:none">fit</text>
+</g>`;
+
+  svgStr=svgStr.replace('</svg>',annotSVG+panelSVG+zoomUI+zoomScript+'</svg>');
 
   const label=state.name||'threat-model';
-  download(`skjaldborg-${label}.svg`, svgStr, 'image/svg+xml');
-  toast('SVG exported 🖼');
+  download(`skjaldborg-${label}.svg`,svgStr,'image/svg+xml');
+  toast('SVG exported with analysis panel');
 }
 
 function importJSON(file){const rd=new FileReader();rd.onload=()=>{try{const o=JSON.parse(rd.result);state=o.state||o;select(null);render();fitView();pushHistory();schedSave();toast('Model imported');}catch(_){toast('Invalid file');}};rd.readAsText(file);}
@@ -3093,62 +3650,78 @@ function loadSampleAD(){
   const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
 
   // ============================
-  // GREY ZONE — top-left cluster
+  // GREY ZONE — top-left cluster (attacker disposable infrastructure)
   // ============================
-  const ligolo=N('ligolo','Ligolo-ng Tunnel',100,260,{notes:'Reverse TUN tunnel: full subnet access to 10.0.0.0/16'});
-  const lolbin=N('lolbin','LOLBins on Workstation',280,260,{notes:'certutil, rundll32, mshta for download & exec'});
-  const redir=N('redirector','CDN Redirector',460,260,{notes:'CDN-fronted domain for C2 traffic obfuscation'});
-  const evilginx=N('evilginx','EvilGinx2 (AiTM)',640,260,{notes:'Adversary-in-the-middle: steals session tokens + MFA bypass'});
-  const chisel=N('chisel','Chisel Backup Tunnel',160,420,{notes:'HTTP tunnel fallback if Ligolo blocked'});
+  const ligolo=N('ligolo','Ligolo-ng Tunnel',-39,248,{
+    notes:'Reverse TUN tunnel: full subnet access to 10.0.0.0/16',
+    attack:[{id:'T1572',name:'Protocol Tunneling'},{id:'T1090.001',name:'Internal Proxy'},{id:'T1021',name:'Remote Services'},{id:'T1570',name:'Lateral Tool Transfer'}]});
+  const evilginx=N('evilginx','EvilGinx2 (AiTM)',500,248,{
+    notes:'Adversary-in-the-middle: steals session tokens + MFA bypass',
+    attack:[{id:'T1557',name:'Adversary-in-the-Middle'},{id:'T1539',name:'Steal Web Session Cookie'},{id:'T1566',name:'Phishing'}],
+    internetExposed:true});
+  const chisel=N('chisel','Chisel Backup Tunnel',55,330,{
+    notes:'HTTP tunnel fallback if Ligolo blocked',
+    attack:[{id:'T1572',name:'Protocol Tunneling'},{id:'T1090',name:'Proxy'},{id:'T1071.001',name:'Web Protocols'},{id:'T1573',name:'Encrypted Channel'}]});
+  const redir=N('redirector','CDN Redirector',286,429,{
+    notes:'CDN-fronted domain for C2 traffic obfuscation',
+    attack:[{id:'T1090',name:'Proxy'},{id:'T1102',name:'Web Service'},{id:'T1568',name:'Dynamic Resolution'}],
+    internetExposed:true});
 
   // ============================
   // RED TEAM INFRASTRUCTURE — bottom-left
   // ============================
-  const kali=N('vm','Kali Linux (Attacker)',140,700,{notes:'Ligolo-ng agent, Impacket, BloodHound'});
-  kali.props.attack=[{id:'T1583',name:'Acquire Infrastructure'}];
-  const sliver=N('sliver','Sliver C2',340,700);
+  const kali=N('vm','Kali Linux (Attacker)',143,704,{
+    notes:'Ligolo-ng agent, Impacket, BloodHound',
+    attack:[{id:'T1583',name:'Acquire Infrastructure'}]});
+  const sliver=N('sliver','Sliver C2',341,704,{
+    attack:[{id:'T1071',name:'Application Layer Protocol'},{id:'T1573',name:'Encrypted Channel'},{id:'T1219',name:'Remote Access Software'}]});
 
   // ============================
-  // REMOTE EMPLOYEE — center, between grey and corp
+  // REMOTE EMPLOYEE — between grey zone and corp network
   // ============================
-  const user=N('external','Remote Employee',760,290,{notes:'Legitimate remote worker connecting via VPN'});
+  const user=N('external','Remote Employee',726,231,{notes:'Legitimate remote worker connecting via VPN'});
 
   // ============================
   // CORPORATE NETWORK — center-right, 3 rows
   // Row 1: VPN GW, DC, Backup DC, Honeypot
   // Row 2: Workstation, Intranet Portal, File Server (with PII)
-  // Row 3: Exchange, ADCS/PKI
+  // Row 3: Exchange, ADCS/PKI, LOLBins (tool on compromised host)
   // ============================
-  const vpn=N('api','VPN Gateway',900,200,{stride:{S:true,I:true}});
-  const dc=N('ad','Domain Controller',1100,200,{stride:{S:true,T:true,E:true,I:true}});
-  const dc2=N('ad','Backup DC',1300,200,{stride:{S:true,T:true,I:true}});
-  const decoy=N('deception','AD Honeypot (Decoys)',1500,200,{notes:'Fake SPNs, decoy shares, honey credentials planted in AD — alerts on any interaction'});
+  const vpn=N('api','VPN Gateway',902,198,{stride:{S:true,I:true},internetExposed:true});
+  const dc=N('ad','Domain Controller',1100,198,{stride:{S:true,T:true,E:true,I:true}});
+  const dc2=N('ad','Backup DC',1298,198,{stride:{S:true,T:true,I:true}});
+  const decoy=N('deception','AD Honeypot (Decoys)',1496,198,{notes:'Fake SPNs, decoy shares, honey credentials planted in AD — alerts on any interaction'});
 
-  const ws=N('vm','Workstation (compromised)',900,400,{stride:{S:true,T:true,E:true},notes:'Domain-joined Win11 workstation — initial foothold via phishing'});
-  const webapp=N('webapp','Intranet Portal',1120,400,{stride:{S:true,T:true,I:true}});
-  const fs=N('store','File Server (SMB)',1380,400,{stride:{T:true,I:true,D:true},pii:true});
+  const ws=N('vm','Workstation (compromised)',902,396,{stride:{S:true,T:true,E:true},notes:'Domain-joined Win11 workstation — initial foothold via phishing'});
+  const webapp=N('webapp','Intranet Portal',1122,396,{stride:{S:true,T:true,I:true}});
+  const fs=N('store','File Server (SMB)',1375,396,{stride:{T:true,I:true,D:true},pii:true});
 
-  const mailsrv=N('process','Exchange Server',980,600,{stride:{S:true,T:true,I:true,R:true}});
-  const ca=N('iam','ADCS / PKI',1220,600,{stride:{S:true,T:true,E:true},notes:'Certificate Services — ESC1-ESC8 attack surface'});
+  const mailsrv=N('process','Exchange Server',979,605,{stride:{S:true,T:true,I:true,R:true}});
+  const ca=N('iam','ADCS / PKI',1221,605,{stride:{S:true,T:true,E:true},notes:'Certificate Services — ESC1-ESC8 attack surface'});
+  const lolbin=N('lolbin','LOLBins on Workstation',1430,583,{
+    notes:'certutil, rundll32, mshta for download & exec',
+    attack:[{id:'T1218',name:'System Binary Proxy Execution'},{id:'T1059',name:'Command & Scripting Interpreter'},{id:'T1197',name:'BITS Jobs'},{id:'T1047',name:'Windows Management Instrumentation'},{id:'T1036',name:'Masquerading'}]});
 
   // ============================
   // CLOUD (AZURE TENANT) — far right
   // ============================
-  const azure=N('cloud','Azure Entra ID',1720,200,{stride:{S:true,E:true}});
-  const azuresentinel=N('siem','Azure Sentinel',1900,200,{notes:'Cloud-native SIEM — ingests AD sign-in logs, MDE alerts'});
-  const m365=N('process','Microsoft 365',1810,380,{stride:{I:true}});
+  const azure=N('cloud','Azure Entra ID',1716,198,{stride:{S:true,E:true}});
+  const azuresentinel=N('siem','Azure Sentinel',1903,198,{
+    notes:'Cloud-native SIEM — ingests AD sign-in logs, MDE alerts',
+    d3fend:[{id:'D3-UBA',name:'User Behavior Analysis'},{id:'D3-PA',name:'Platform Alerting'},{id:'D3-FA',name:'File Analysis'}]});
+  const m365=N('process','Microsoft 365',1815,385,{stride:{I:true}});
 
   // ============================
   // DMZ — bottom-center
   // ============================
-  const fw=N('firewall','Perimeter Firewall',920,800);
-  const proxy=N('cdn','Reverse Proxy',1140,800);
-  const emailgw=N('process','Email Gateway / SEG',1360,800);
+  const fw=N('firewall','Perimeter Firewall',924,803,{internetExposed:true});
+  const proxy=N('cdn','Reverse Proxy',1144,803,{internetExposed:true});
+  const emailgw=N('process','Email Gateway / SEG',1364,803,{internetExposed:true});
 
   // ============================
   // BOUNDARIES
   // ============================
-  const greyBnd={id:uid('b'),type:'grey',x:50,y:170,w:720,h:340,label:'Grey Zone (Disposable Infrastructure)',
+  const greyBnd={id:uid('b'),type:'grey',x:-88,y:154,w:720,h:340,label:'Grey Zone (Disposable Infrastructure)',
     d3fend:[],attack:[{id:'T1584',name:'Compromise Infrastructure'},{id:'T1090',name:'Proxy'}],notes:'Disposable redirectors + tunneling tools. Vorgelagert between attacker and target.',pii:false};
   const rtBnd={id:uid('b'),type:'redteam',x:60,y:610,w:400,h:180,label:'Red Team Infrastructure',
     d3fend:[],attack:[{id:'T1583',name:'Acquire Infrastructure'},{id:'T1587',name:'Develop Capabilities'}],notes:'Attacker-owned VPS',pii:false};
@@ -3256,10 +3829,10 @@ function loadSampleCobaltBeacon(){
   // ============================
   // GREY ZONE — top-left: redirectors + phishing infra + payload staging
   // ============================
-  const redir1=N('redirector','HTTPS Redirector',100,200,{notes:'Apache mod_rewrite — filters Blue Team / sandbox traffic, forwards Beacon HTTPS to C2'});
-  const redir2=N('redirector','DNS Redirector',300,200,{notes:'socat DNS relay — forwards Beacon DNS to team server over DoH'});
-  const gophish=N('gophish','GoPhish Server',500,200,{notes:'Phishing campaign platform — sends macro-laced .docm via SMTP relay'});
-  const payload=N('payload','Payload Staging (S3)',300,360,{notes:'Pre-signed S3 URL hosting HTA dropper → downloads Cobalt Strike stager DLL'});
+  const redir1=N('redirector','HTTPS Redirector',100,200,{notes:'Apache mod_rewrite — filters Blue Team / sandbox traffic, forwards Beacon HTTPS to C2',internetExposed:true});
+  const redir2=N('redirector','DNS Redirector',300,200,{notes:'socat DNS relay — forwards Beacon DNS to team server over DoH',internetExposed:true});
+  const gophish=N('gophish','GoPhish Server',500,200,{notes:'Phishing campaign platform — sends macro-laced .docm via SMTP relay',internetExposed:true});
+  const payload=N('payload','Payload Staging (S3)',300,360,{notes:'Pre-signed S3 URL hosting HTA dropper → downloads Cobalt Strike stager DLL',internetExposed:true});
 
   // ============================
   // RED TEAM INFRASTRUCTURE — bottom-left
@@ -3286,8 +3859,8 @@ function loadSampleCobaltBeacon(){
   // ============================
   // DMZ — bottom-center
   // ============================
-  const fw=N('firewall','Perimeter Firewall',880,660,{notes:'Palo Alto NGFW — SSL decrypt, IPS, URL filtering'});
-  const mailgw=N('process','Email Gateway / SEG',1120,660,{notes:'Proofpoint — scans inbound mail, detonates attachments'});
+  const fw=N('firewall','Perimeter Firewall',880,660,{notes:'Palo Alto NGFW — SSL decrypt, IPS, URL filtering',internetExposed:true});
+  const mailgw=N('process','Email Gateway / SEG',1120,660,{notes:'Proofpoint — scans inbound mail, detonates attachments',internetExposed:true});
 
   // ============================
   // BOUNDARIES
@@ -3399,10 +3972,10 @@ function loadSampleK8s(){
   const node2=N('k8s_node','Worker Node 2',600,560);
   const node3=N('k8s_node','Worker Node 3',840,560);
   const kubelet1=N('process','kubelet',360,720,{notes:'Node agent — executes pod specs, mounts secrets'});
-  const pod_vuln=N('pod','Vulnerable App Pod',280,900,{stride:{S:true,T:true,E:true},notes:'Web app with RCE vulnerability (CVE-2024-XXXX)'});
+  const pod_vuln=N('pod','Vulnerable App Pod',280,900,{stride:{S:true,T:true,E:true},notes:'Web app with RCE vulnerability (CVE-2024-XXXX)',internetExposed:true});
   const pod_priv=N('pod','Privileged DaemonSet',540,900,{stride:{E:true},notes:'Monitoring agent running as privileged — container escape target'});
   const svc_acc=N('sa','ServiceAccount (over-permissioned)',800,900,{stride:{E:true,I:true},notes:'SA with cluster-admin — mounted in pod by default'});
-  const ingress=N('api','Ingress Controller',360,1100,{stride:{S:true}});
+  const ingress=N('api','Ingress Controller',360,1100,{stride:{S:true},internetExposed:true});
   const registry=N('store','Container Registry',1060,380,{stride:{T:true,I:true},notes:'Harbor/ECR — stores container images'});
 
   // Control plane flows
@@ -3485,13 +4058,13 @@ function loadSampleCloud(){
   // ============================
   // AZURE TENANT
   // ============================
-  const entra=N('cloud','Entra ID (Azure AD)',500,200,{stride:{S:true,T:true,E:true}});
+  const entra=N('cloud','Entra ID (Azure AD)',500,200,{stride:{S:true,T:true,E:true},internetExposed:true});
   const cond=N('iam','Conditional Access',740,200,{notes:'MFA, device compliance, location-based'});
-  const app_reg=N('api','App Registration (OAuth)',500,400,{stride:{S:true,E:true},notes:'Multi-tenant app with broad Graph permissions'});
-  const graph=N('api','Microsoft Graph API',740,400,{stride:{I:true}});
+  const app_reg=N('api','App Registration (OAuth)',500,400,{stride:{S:true,E:true},notes:'Multi-tenant app with broad Graph permissions',internetExposed:true});
+  const graph=N('api','Microsoft Graph API',740,400,{stride:{I:true},internetExposed:true});
   const keyvault=N('store','Azure Key Vault',320,580,{stride:{T:true,I:true},pii:true});
-  const storage=N('store','Storage Account (Blob)',560,580,{stride:{I:true,D:true},pii:true});
-  const vm=N('vm','Azure VM (jumpbox)',800,580,{stride:{S:true,T:true,E:true}});
+  const storage=N('store','Storage Account (Blob)',560,580,{stride:{I:true,D:true},pii:true,internetExposed:true});
+  const vm=N('vm','Azure VM (jumpbox)',800,580,{stride:{S:true,T:true,E:true},internetExposed:true});
   const sentinel=N('siem','Azure Sentinel',980,200,{notes:'SIEM — detects sign-in anomalies, impossible travel'});
 
   Eadd(entra,cond,'Enforce policy');
@@ -3563,9 +4136,9 @@ function loadSampleSupplyChain(){
   // ============================
   // CI/CD PIPELINE
   // ============================
-  const ghRepo=N('store','GitHub Repository',400,200,{stride:{T:true,I:true}});
-  const ghActions=N('process','GitHub Actions Runner',660,200,{stride:{S:true,T:true,E:true},notes:'Self-hosted runner — full access to secrets'});
-  const registry=N('store','Container Registry (GHCR)',920,200,{stride:{T:true,I:true}});
+  const ghRepo=N('store','GitHub Repository',400,200,{stride:{T:true,I:true},internetExposed:true});
+  const ghActions=N('process','GitHub Actions Runner',660,200,{stride:{S:true,T:true,E:true},notes:'Self-hosted runner — full access to secrets',internetExposed:true});
+  const registry=N('store','Container Registry (GHCR)',920,200,{stride:{T:true,I:true},internetExposed:true});
   const argocd=N('process','ArgoCD (GitOps)',660,400,{notes:'Watches repo for changes, deploys to cluster'});
   const secrets=N('store','Pipeline Secrets',400,400,{stride:{I:true},pii:true,notes:'AWS keys, deploy tokens, signing keys'});
 
@@ -3589,7 +4162,7 @@ function loadSampleSupplyChain(){
   // PRODUCTION K8S (inside cloud)
   // ============================
   const apiSrv=N('k8s_cp','K8s API Server',660,660);
-  const prodPod=N('pod','Production Pods',500,840,{stride:{S:true,T:true}});
+  const prodPod=N('pod','Production Pods',500,840,{stride:{S:true,T:true},internetExposed:true});
   const db=N('store','Production Database',860,840,{stride:{I:true,D:true},pii:true});
   const users=N('external','End Users',160,840);
 
@@ -3661,7 +4234,7 @@ function loadSampleRansomware(){
   // ============================
   const dc=N('ad','Domain Controller',560,180,{stride:{S:true,T:true,E:true,I:true},notes:'Abused for GPO deployment of ransomware payload'});
   const dc2=N('ad','Backup DC',800,180,{stride:{S:true,T:true}});
-  const rdp_srv=N('vm','RDP Jump Server',340,180,{stride:{S:true,T:true,E:true},notes:'Internet-facing RDP — initial access via brute-force'});
+  const rdp_srv=N('vm','RDP Jump Server',340,180,{stride:{S:true,T:true,E:true},notes:'Internet-facing RDP — initial access via brute-force',internetExposed:true});
   const ws1=N('vm','Workstation 1',360,380,{stride:{S:true,T:true,E:true}});
   const ws2=N('vm','Workstation 2',560,380);
   const fs=N('store','File Server (critical)',800,380,{stride:{T:true,I:true,D:true},pii:true,notes:'20TB of business-critical data — exfiltrated before encryption'});
@@ -3684,8 +4257,8 @@ function loadSampleRansomware(){
   // ============================
   // DMZ
   // ============================
-  const fw=N('firewall','Perimeter Firewall',200,780);
-  const vpn=N('api','VPN Gateway',440,780);
+  const fw=N('firewall','Perimeter Firewall',200,780,{internetExposed:true});
+  const vpn=N('api','VPN Gateway',440,780,{internetExposed:true});
   Eadd(fw,rdp_srv,'Allow RDP (3389)');
   Eadd(vpn,dc,'RADIUS auth');
 
@@ -3836,7 +4409,7 @@ tutorial:`
   <div class="card"><h4>&#128194; Assets &amp; Infrastructure</h4>
     <p>What you're protecting: Active Directory, Kubernetes clusters, cloud workloads (AWS/Azure/GCP), data stores, VMs, Docker containers, IAM, and network components.</p></div>
   <div class="card"><h4>&#128736; Boundaries &amp; Zones</h4>
-    <p>Trust boundaries segment your architecture: Corporate perimeter, DMZ, Cloud boundary, PII zones, and Grey Zones (attacker staging). Boundaries can be locked so nodes move with them.</p></div>
+    <p>Trust boundaries segment your architecture: Corporate perimeter, DMZ, Cloud boundary, PII zones, Grey Zones (attacker staging), and <b>Freehand Boundaries</b> — freely drawable polygons that follow your architecture's natural shape.</p></div>
 </div>
 
 <h3>Placing Nodes</h3>
@@ -3849,10 +4422,20 @@ tutorial:`
 
 <h3>Drawing Edges (Data Flows &amp; Attack Vectors)</h3>
 <ul>
-  <li>Select the <b>Data Flow</b> tool from the palette, then click a <b>source node</b> followed by a <b>target node</b>.</li>
+  <li>Select the <b>Data Flow</b> tool (or Attack Vector / Pivot Tunnel), then <b>click a source node</b> followed by a <b>target node</b>.</li>
+  <li>The tool stays armed automatically — keep clicking source → target pairs to draw multiple flows. Press <span class="kb">Esc</span> to stop.</li>
   <li><b>Double-click</b> any edge to toggle it between a normal data flow (blue) and an attack vector (red).</li>
-  <li>In the edge inspector you can toggle: <b>offensive</b> (red), <b>bidirectional</b> (arrows on both ends), and <b>tunnel</b> (animated glow).</li>
+  <li>In the edge inspector you can toggle: <b>offensive</b> (red), <b>bidirectional</b>, <b>tunnel</b> (animated glow), and <b>🔐 Encrypted in Transit</b>.</li>
   <li>Tunnel edges glow <span style="color:var(--offense)">red</span> for offensive pivots or <span style="color:var(--trust)">blue</span> for defensive VPN/encrypted channels.</li>
+  <li>A 🔐 badge appears on the canvas edge when <em>Encrypted in Transit</em> is enabled.</li>
+</ul>
+
+<h3>Freehand Trust Boundary</h3>
+<ul>
+  <li>Select <b>Freehand Boundary</b> from the <em>Security Zones</em> palette group.</li>
+  <li><b>Click</b> to place vertices along the boundary outline — draw any polygon shape.</li>
+  <li>Press <span class="kb">Esc</span> to finalize (save) the polygon. The boundary is stored with your model.</li>
+  <li>Click the freehand boundary to select it, then drag it to reposition (all contained nodes move with it).</li>
 </ul>
 
 <h3>Blue Team Shields</h3>
@@ -3860,29 +4443,43 @@ tutorial:`
 
 <h3>Boundaries</h3>
 <ul>
-  <li>Arm a boundary tool, then <b>click</b> the top-left corner and <b>click again</b> at the bottom-right to draw it.</li>
+  <li>Arm a rectangular boundary tool, then <b>click</b> the top-left corner and <b>click again</b> at the bottom-right to draw it.</li>
   <li><b>Click</b> a boundary to grab it, <b>move</b> the mouse, <b>click again</b> to place (not drag). Press <span class="kb">Esc</span> to cancel.</li>
   <li>When a boundary is <b>locked</b> (default), moving it also moves all contained nodes.</li>
   <li>Right-click a boundary for options: rename, fit-to-contents, lock/unlock, delete.</li>
 </ul>
 
 <h3>Context Menu</h3>
-<p>Right-click on any element (node, edge, boundary) to access quick actions:</p>
+<p>Right-click on any element for <b>semantic quick actions</b> — items change based on the component type:</p>
 <ul>
-  <li><b>Nodes:</b> Rename, Duplicate, Toggle Offensive, Delete</li>
-  <li><b>Edges:</b> Rename, Toggle Attack Vector, Toggle Bidirectional, Toggle Tunnel, Delete</li>
-  <li><b>Boundaries:</b> Rename, Fit to Contents, Lock/Unlock, Delete</li>
-  <li><b>Canvas:</b> Paste, Select All, Arrange</li>
+  <li><b>Data stores (DB, Bucket, Cache…):</b> Toggle PII flag · Toggle Encrypted at Rest · Cycle classification level (Public → Internal → Confidential → Restricted → Secret) · Flag STRIDE I/T threats</li>
+  <li><b>Processes &amp; Apps:</b> Quick-flag the most relevant STRIDE categories</li>
+  <li><b>External actors:</b> Flag Spoofing (S) and Repudiation (R) risks</li>
+  <li><b>IAM / AD / Roles:</b> Flag Privilege Escalation (E), Tampering (T), Repudiation (R)</li>
+  <li><b>K8s Pod / Node:</b> Mark as privileged container · Flag Privilege Escalation</li>
+  <li><b>Blue Team tools:</b> Clear all applied controls</li>
+  <li><b>Edges / Data Flows:</b> Toggle attack vector · Toggle bidirectional · 🔐 Toggle Encrypted in Transit</li>
+  <li><b>Boundaries:</b> Rename · Fit to contents · Lock/Unlock · Select all inside · Delete</li>
+  <li><b>Canvas:</b> Auto-arrange · Fit view · Clear canvas</li>
 </ul>
 
-<h3>Inspector Panel</h3>
-<p>Click any element to open its <b>inspector</b> on the right. Tabs include:</p>
+<h3>Data Classification (Stores &amp; Databases)</h3>
+<p>Click any data-holding node (Store, Bucket, DB, Cache, Secret, ConfigMap, Queue…) to open a <b>📁 Data Classification</b> section in the inspector:</p>
 <ul>
-  <li><b>Props:</b> Label, notes, PII flag, offensive toggle, attached controls (shields)</li>
-  <li><b>STRIDE:</b> Check which STRIDE threats apply to this element</li>
-  <li><b>ATT&CK:</b> Assign MITRE ATT&CK technique IDs (auto-populated for Red Team nodes)</li>
-  <li><b>D3FEND:</b> Assign countermeasure IDs (auto-populated for Blue Team controls)</li>
-  <li><b>Analysis:</b> View per-boundary attack/defense scores and residual risk</li>
+  <li><b>Classification level</b> — Unclassified / 🟢 Public / 🔵 Internal / 🟡 Confidential / 🟠 Restricted / 🔴 Secret</li>
+  <li><b>Data categories</b> — click chips to tag: Personal (PII), Health (PHI), Financial (PCI), Biometric, Communications, Legal</li>
+  <li><b>🔐 Encrypted at Rest</b> — toggle to mark encryption status</li>
+</ul>
+
+<h3>MITRE Technique Links</h3>
+<p>Every ATT&CK and D3FEND technique ID shown as a chip in the inspector is a <b>clickable link</b> that opens the official MITRE page in a new tab. Click the <code>T1071</code> or <code>D3-PA</code> code to go directly to the technique description.</p>
+
+<h3>Inspector Panel</h3>
+<p>Click any element to open its <b>inspector</b> on the right:</p>
+<ul>
+  <li><b>Nodes:</b> Label · Notes · PII flag · Data classification (stores) · Applied controls · STRIDE assessment · ATT&amp;CK techniques · D3FEND countermeasures · PASTA stage · Free-movement toggle</li>
+  <li><b>Edges:</b> Label · Route · Offensive / Bidirectional / Tunnel / 🔐 Encrypted in Transit toggles · Notes · ATT&amp;CK techniques</li>
+  <li><b>Boundaries:</b> Label · PII toggle · MITRE mapping (D3FEND or ATT&amp;CK depending on boundary type) · Attack-tree risk score</li>
 </ul>
 `,
 
@@ -3957,49 +4554,55 @@ workflow:`
 
 <h3>Step 1: Define the Scope</h3>
 <ul>
-  <li>Place <b>boundaries</b> for your architecture zones (Corporate, DMZ, Cloud, etc.)</li>
-  <li>Add a <b>PII zone</b> (green) if you have GDPR/privacy-sensitive assets</li>
+  <li>Place <b>boundaries</b> for your architecture zones (Corporate, DMZ, Cloud, K8s cluster, etc.)</li>
+  <li>Use a <b>Freehand Boundary</b> to draw irregular perimeters that match your real topology — click vertices, press <span class="kb">Esc</span> to finalize.</li>
+  <li>Add a <b>PII zone</b> (green) if you have GDPR/privacy-sensitive data assets</li>
   <li>Consider adding a <b>Grey Zone</b> for attacker staging infrastructure</li>
 </ul>
 
-<h3>Step 2: Place Assets</h3>
+<h3>Step 2: Place &amp; Classify Assets</h3>
 <ul>
   <li>Drop infrastructure nodes: AD, DNS, web servers, databases, K8s clusters</li>
   <li>Place them <b>inside</b> their respective boundaries</li>
   <li>Label each node clearly (e.g., "DC01", "prod-api", "customer-db")</li>
-  <li>Mark sensitive stores with the <b>PII</b> flag</li>
+  <li>For data stores: open the inspector and set the <b>📁 Data Classification</b> — level (Public / Internal / Confidential / Restricted / Secret), data categories (PII, PHI, PCI, Biometric…), and <b>🔐 Encrypted at Rest</b></li>
+  <li>Mark stores with the <b>PII flag</b> — they automatically appear in the PII zone</li>
+  <li>Use <span class="kb">Right-click</span> → <em>Mark as PII</em> or <em>Cycle classification</em> for quick edits</li>
 </ul>
 
 <h3>Step 3: Draw Data Flows</h3>
 <ul>
-  <li>Connect nodes with data flow edges showing how data moves</li>
-  <li>Label flows with protocol/data type (e.g., "LDAP auth", "TLS 443", "SQL queries")</li>
+  <li>Select the <b>Data Flow</b> tool — it stays armed so you can wire multiple flows in a row. Press <span class="kb">Esc</span> when done.</li>
+  <li>Label flows with protocol/data type (e.g., "LDAP auth", "TLS 1.3", "SQL queries")</li>
+  <li>Toggle <b>🔐 Encrypted in Transit</b> in the inspector (or right-click the edge) for each encrypted channel — a 🔐 badge appears on the canvas</li>
   <li>Mark flows that cross boundaries — these are key trust boundary crossings</li>
 </ul>
 
 <h3>Step 4: Model the Attacker</h3>
 <ul>
-  <li>Place Red Team infrastructure (C2 server, phishing platform)</li>
-  <li>Draw <b>attack vectors</b> (red edges) showing the attack path</li>
-  <li>Use <b>tunnel edges</b> for pivot/C2 channels (animated glow)</li>
-  <li>Map <b>ATT&CK techniques</b> to each attack edge</li>
+  <li>Place Red Team infrastructure (C2 server, phishing platform) in a <b>Red Team</b> or <b>Grey Zone</b> boundary</li>
+  <li>Draw <b>attack vectors</b> (red edges) showing the attack path — tool stays armed for rapid chaining</li>
+  <li>Use <b>tunnel edges</b> for pivot/C2 channels (animated red glow)</li>
+  <li>Map <b>ATT&CK techniques</b> to each attack edge — click the technique ID chip to open the MITRE page</li>
   <li>Add <b>LOLBin</b> / <b>pivot</b> nodes at each lateral movement point</li>
 </ul>
 
 <h3>Step 5: Deploy Defenses</h3>
 <ul>
-  <li>Arm Blue Team tools and <b>click on assets</b> to shield them</li>
-  <li>Each shield adds D3FEND countermeasures to that node</li>
+  <li>Arm Blue Team tools and <b>click on assets</b> to shield them (D3FEND countermeasures auto-attach)</li>
   <li>Add defensive boundaries (trust boundaries with D3FEND mappings)</li>
+  <li>Use <b>right-click → STRIDE flags</b> on nodes to mark threats relevant to each component type</li>
   <li>Consider <b>defense-in-depth</b>: multiple shields per critical asset</li>
 </ul>
 
 <h3>Step 6: Analyze &amp; Report</h3>
 <ul>
+  <li>Click <b>Arrange</b> to auto-layout nodes into semantic zones (K8s, Cloud, Red Team, Blue Team, etc.)</li>
   <li>Open the <b>Analysis</b> tab to see per-boundary risk scores</li>
-  <li>Run the STRIDE matrix to check coverage</li>
+  <li>Run the <b>STRIDE</b> matrix to check coverage</li>
   <li>Click <b>Report</b> to generate a full threat model document</li>
-  <li>Export to share with your team</li>
+  <li>Click <b>🖼 SVG</b> to export the diagram as a standalone image (embeds font, resolves colors)</li>
+  <li>Click <b>Save</b> to export JSON for persistence and team sharing</li>
 </ul>
 
 <div class="hl"><p><b>Pro tip:</b> Load a <b>Sample Scenario</b> to see a complete workflow example, then modify it for your environment.</p></div>
@@ -4024,8 +4627,8 @@ shortcuts:`
   <thead><tr><th>Key</th><th>Action</th><th>Context</th></tr></thead>
   <tbody>
     <tr><td><span class="kb">Delete</span> / <span class="kb">Backspace</span></td><td>Delete selected element</td><td>Any selection</td></tr>
-    <tr><td><span class="kb">Esc</span></td><td>Cancel armed tool / deselect</td><td>Any time</td></tr>
-    <tr><td><span class="kb">Shift</span> + click</td><td>Keep tool armed after placing</td><td>While placing nodes/edges</td></tr>
+    <tr><td><span class="kb">Esc</span></td><td>Stop drawing flows · finalize freehand boundary · deselect · cancel tool</td><td>Any time</td></tr>
+    <tr><td><span class="kb">Shift</span> + click</td><td>Keep node/boundary tool armed after placing</td><td>While placing nodes</td></tr>
     <tr><td><span class="kb">?</span></td><td>Toggle Help panel</td><td>Any time</td></tr>
   </tbody>
 </table>
@@ -4034,15 +4637,18 @@ shortcuts:`
 <table>
   <thead><tr><th>Action</th><th>Result</th></tr></thead>
   <tbody>
-    <tr><td><b>Click</b> node/edge/boundary</td><td>Select it (opens inspector)</td></tr>
-    <tr><td><b>Double-click</b> edge</td><td>Toggle attack vector (offensive)</td></tr>
-    <tr><td><b>Right-click</b> element</td><td>Context menu (rename, delete, etc.)</td></tr>
+    <tr><td><b>Click</b> node / edge / boundary</td><td>Select it (opens inspector)</td></tr>
+    <tr><td><b>Double-click</b> edge</td><td>Toggle attack vector (offensive ↔ data flow)</td></tr>
+    <tr><td><b>Right-click</b> element</td><td>Semantic context menu — items adapt to the component type</td></tr>
     <tr><td><b>Drag</b> node</td><td>Move node on canvas</td></tr>
     <tr><td><b>Click</b> boundary → move → <b>click</b></td><td>Relocate boundary (click-to-grab, click-to-place)</td></tr>
     <tr><td><b>Drag</b> canvas background</td><td>Pan the viewport</td></tr>
-    <tr><td><b>Scroll wheel</b></td><td>Zoom in/out</td></tr>
-    <tr><td><b>Blue tool</b> → click on node</td><td>Attach as shield (adds D3FEND)</td></tr>
+    <tr><td><b>Scroll wheel</b></td><td>Zoom in / out</td></tr>
+    <tr><td><b>Flow / Attack / Tunnel tool</b> → click source → click target</td><td>Draw edge; tool stays armed — repeat or press Esc to stop</td></tr>
+    <tr><td><b>Freehand Boundary tool</b> → click vertices → <span class="kb">Esc</span></td><td>Draw a polygon trust boundary; Esc finalizes and saves it</td></tr>
+    <tr><td><b>Blue tool</b> → click on node</td><td>Attach as shield (adds D3FEND countermeasures)</td></tr>
     <tr><td><b>Blue tool</b> → click empty canvas</td><td>Place standalone defense node</td></tr>
+    <tr><td><b>Click MITRE chip</b> (ATT&CK / D3FEND ID)</td><td>Open official MITRE technique page in new tab</td></tr>
   </tbody>
 </table>
 
@@ -4050,27 +4656,43 @@ shortcuts:`
 <table>
   <thead><tr><th>Button</th><th>Function</th></tr></thead>
   <tbody>
-    <tr><td><b>STRIDE</b></td><td>Show STRIDE threat/element matrix</td></tr>
-    <tr><td><b>PASTA</b></td><td>Show PASTA 7-stage methodology</td></tr>
+    <tr><td><b>STRIDE</b></td><td>Show STRIDE threat/element applicability matrix</td></tr>
+    <tr><td><b>PASTA</b></td><td>Show PASTA 7-stage methodology walkthrough</td></tr>
     <tr><td><b>Legend</b></td><td>Color key + element descriptions</td></tr>
-    <tr><td><b>Report</b></td><td>Generate Markdown threat model report</td></tr>
-    <tr><td><b>Arrange</b></td><td>Auto-layout nodes by role (corp/dmz/cloud/redteam)</td></tr>
-    <tr><td><b>Import</b></td><td>Load a previously exported JSON file</td></tr>
-    <tr><td><b>Save</b></td><td>Export current model as JSON</td></tr>
-    <tr><td><b>Sample</b></td><td>Open the sample scenario library</td></tr>
-    <tr><td><b>Help</b></td><td>Open this help panel</td></tr>
+    <tr><td><b>Report</b></td><td>Generate Markdown threat model document</td></tr>
+    <tr><td><b>Arrange</b></td><td>Auto-layout into semantic zones: External · Network/DMZ · Corporate · K8s · Cloud · IAM · Blue Team · Red Team · Grey Zone · Pivot</td></tr>
+    <tr><td><b>🖼 SVG</b></td><td>Export diagram as a self-contained SVG image (font embedded, colors resolved)</td></tr>
+    <tr><td><b>Import</b></td><td>Load a previously saved <code>.json</code> / <code>.skjaldborg</code> file</td></tr>
+    <tr><td><b>Save</b></td><td>Download current model as JSON</td></tr>
+    <tr><td><b>Sample</b></td><td>Open the built-in scenario library (5 pre-built kill chains)</td></tr>
+    <tr><td><b>? Help</b></td><td>Open this help panel</td></tr>
   </tbody>
 </table>
 
-<h3>Inspector Tabs</h3>
+<h3>Context Menu — Semantic Actions by Type</h3>
 <table>
-  <thead><tr><th>Tab</th><th>Contents</th></tr></thead>
+  <thead><tr><th>Element</th><th>Extra actions</th></tr></thead>
   <tbody>
-    <tr><td><b>Props</b></td><td>Element label, notes, PII flag, offensive toggle, controls/shields</td></tr>
-    <tr><td><b>STRIDE</b></td><td>Checkboxes for each STRIDE category applicable to this element</td></tr>
-    <tr><td><b>ATT&CK</b></td><td>MITRE ATT&CK technique IDs assigned to this element</td></tr>
-    <tr><td><b>D3FEND</b></td><td>MITRE D3FEND countermeasure IDs</td></tr>
-    <tr><td><b>Analysis</b></td><td>Per-boundary attack/defense scoring, residual risk</td></tr>
+    <tr><td><b>Data Store / DB / Cache / Secret…</b></td><td>Toggle PII · Toggle Encrypted at Rest · Cycle classification level · Flag I/T STRIDE threats</td></tr>
+    <tr><td><b>Process / Webapp / API / Serverless</b></td><td>Quick-flag top STRIDE categories for this type</td></tr>
+    <tr><td><b>External Entity</b></td><td>Flag Spoofing (S) · Flag Repudiation (R)</td></tr>
+    <tr><td><b>IAM / AD / Role / SA / RBAC</b></td><td>Flag Privilege Escalation (E) · Tampering (T) · Repudiation (R)</td></tr>
+    <tr><td><b>K8s Pod / Node</b></td><td>Mark as privileged container · Flag Privilege Escalation (E)</td></tr>
+    <tr><td><b>Blue Team tool</b> (with controls)</td><td>Clear all applied controls</td></tr>
+    <tr><td><b>Data Flow / Edge</b></td><td>Toggle attack vector · Toggle bidirectional · 🔐 Toggle Encrypted in Transit</td></tr>
+  </tbody>
+</table>
+
+<h3>Inspector — Props by Element Type</h3>
+<table>
+  <thead><tr><th>Element</th><th>Inspector shows</th></tr></thead>
+  <tbody>
+    <tr><td><b>Any node</b></td><td>Label · Notes · PII flag · STRIDE assessment · ATT&CK techniques · D3FEND countermeasures · PASTA stage · Free-movement toggle</td></tr>
+    <tr><td><b>Data store nodes</b></td><td>+ 📁 Classification level · Data categories (PII/PHI/PCI/Biometric/Comms/Legal) · 🔐 Encrypted at Rest</td></tr>
+    <tr><td><b>Red Team nodes</b></td><td>ATT&CK techniques (pre-populated) · D3FEND detection countermeasures</td></tr>
+    <tr><td><b>Blue Team nodes</b></td><td>D3FEND countermeasures (pre-populated) · Applied controls list</td></tr>
+    <tr><td><b>Data Flow / Edge</b></td><td>Label · Route · Offensive / Bidirectional / Tunnel / 🔐 Encrypted in Transit · Notes · ATT&CK techniques</td></tr>
+    <tr><td><b>Boundary</b></td><td>Label · PII toggle · MITRE mapping · Attack-tree risk score (attack ↔ defense)</td></tr>
   </tbody>
 </table>
 `,
@@ -4091,7 +4713,7 @@ about:`
       <li>Purple team focus: offense <em>and</em> defense in one view</li>
       <li>Framework integration: STRIDE + PASTA + ATT&CK + D3FEND</li>
       <li>Visual-first: animated tunnels, force-field boundaries, shield badges</li>
-      <li>Export-ready: JSON persistence + Markdown reports</li>
+      <li>Export-ready: JSON · Markdown reports · SVG diagram image</li>
     </ul>
   </div>
   <div class="card"><h4>What Makes It Different</h4>
@@ -4100,6 +4722,8 @@ about:`
       <li>Blue team tools as shields <em>on</em> assets, not floating boxes</li>
       <li>Residual risk scoring: attack surface minus countermeasures</li>
       <li>Pre-built Red/Blue component libraries with auto-ATT&CK/D3FEND</li>
+      <li>Data classification + encryption status per store — not just a checkbox</li>
+      <li>Clickable MITRE IDs linking directly to the official knowledge base</li>
       <li>Sample kill chains you can adapt for your environment</li>
     </ul>
   </div>
@@ -4109,29 +4733,35 @@ about:`
 <ul>
   <li><b>Rendering:</b> SVG canvas with layers (boundaries → edges → nodes)</li>
   <li><b>State:</b> In-memory JSON (nodes, edges, boundaries). Export/import for persistence.</li>
-  <li><b>Components:</b> Each node type has an icon, role, default ATT&CK/D3FEND mappings, and STRIDE applicability.</li>
-  <li><b>Edges:</b> Data flows (blue) or attack vectors (red), with optional tunnel animation and bidirectional markers.</li>
-  <li><b>Boundaries:</b> Rectangular zones with force-field styling. Types: trust (blue), privacy (green), cloud (gradient), network (dashed).</li>
+  <li><b>Components:</b> Each node type has an icon, role, default ATT&CK/D3FEND mappings, STRIDE applicability, and data classification metadata (for store types).</li>
+  <li><b>Edges:</b> Data flows (blue) or attack vectors (red), with optional tunnel animation, bidirectional markers, and encrypted-in-transit flag (🔐 badge on canvas).</li>
+  <li><b>Boundaries:</b> Rectangular zones with force-field styling, or freehand polygons (Catmull-Rom smoothed, open path). Types: trust, privacy, cloud, network, red team, grey zone, namespace, NetworkPolicy, freehand.</li>
+  <li><b>Auto-arrange:</b> Semantic zone layout — 10 zones including K8s cluster, Red Team, Grey Zone, Pivot, Blue Team, IAM.</li>
+  <li><b>SVG export:</b> Measures content bbox, removes grid, resolves CSS variables, embeds font — produces a standalone image.</li>
 </ul>
 
 <h3>Color Key</h3>
 <div style="margin:10px 0">
   <div class="color-key"><span class="dot" style="background:var(--offense)"></span> <b>Red</b> — Offensive / attack vectors / Red Team infrastructure</div>
-  <div class="color-key"><span class="dot" style="background:var(--trust)"></span> <b>Cyan/Blue</b> — Defensive / trust boundaries / Blue Team controls</div>
-  <div class="color-key"><span class="dot" style="background:var(--privacy)"></span> <b>Green</b> — PII/Privacy zones / GDPR-relevant data</div>
+  <div class="color-key"><span class="dot" style="background:var(--trust)"></span> <b>Cyan/Blue</b> — Defensive / trust boundaries / Blue Team controls / encrypted channels</div>
+  <div class="color-key"><span class="dot" style="background:var(--privacy)"></span> <b>Green</b> — PII/Privacy zones / GDPR-relevant data / encryption indicators</div>
   <div class="color-key"><span class="dot" style="background:var(--accent)"></span> <b>Purple</b> — UI accents / selected elements / Skjaldborg brand</div>
+  <div class="color-key"><span class="dot" style="background:#c41e3a"></span> <b>Dark Red</b> — Freehand trust boundaries (classical threat model style)</div>
   <div class="color-key"><span class="dot" style="background:#888"></span> <b>Grey</b> — Neutral data flows / infrastructure / Grey Zone staging</div>
 </div>
 
 <h3>Tips &amp; Best Practices</h3>
 <ul>
   <li>Start with boundaries to define your architecture before placing nodes</li>
-  <li>Use <b>Auto Arrange</b> after loading a sample to get a clean layout</li>
+  <li>Use <b>Freehand Boundary</b> for organic perimeters that don't fit a rectangle</li>
+  <li>Use <b>Auto Arrange</b> after building your model — it places every node into the correct semantic zone automatically</li>
+  <li>Set data classification and encryption status on all stores — it shows up in the Markdown report</li>
+  <li>Click any ATT&CK / D3FEND ID chip to open the MITRE reference page directly</li>
+  <li>Flow tools stay armed — draw all your flows in one pass, then press Esc</li>
   <li>Map ATT&CK on attack edges for the report to auto-generate a technique matrix</li>
   <li>Add D3FEND countermeasures on nodes/boundaries to calculate residual risk</li>
-  <li>Use tunnel edges for VPN/pivot connections to visually distinguish them</li>
   <li>Export frequently — the tool runs entirely in-browser with no server-side save</li>
-  <li>The report generates Markdown suitable for pasting into wikis, PRs, or docs</li>
+  <li>Use <b>SVG export</b> to embed diagrams in docs, wikis, or slide decks</li>
 </ul>
 
 <h3>Acknowledgements &amp; References</h3>
