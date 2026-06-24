@@ -487,6 +487,7 @@ svg#canvas.panning{cursor:grabbing}
 const ICONS = {
   external:'<path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/>',
   internet:'<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="12" cy="12" rx="3.8" ry="10" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.3"/><ellipse cx="12" cy="6.5" rx="8.3" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/><ellipse cx="12" cy="17.5" rx="8.3" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/>',
+  mfa:'<circle cx="8" cy="9" r="3.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M11.8 9H21M20 9v3.5M17.5 9v2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
   process:'<path d="M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2L5 19M19 19l-1.8-1.8M6.8 6.8L5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   store:'<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6M4 6c0 1.7 3.6 3 8 3s8-1.3 8-3M4 11c0 1.7 3.6 3 8 3s8-1.3 8-3M4 16c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/>',
   flow:'<path d="M4 12h14M13 6l6 6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -1284,6 +1285,14 @@ const BASE_EASE = {
   siem:38, edr:34, ndr:34, asm:36, cnapp:34, cspm:34,
   hardening:22, deception:16,
 };
+function toggleMFA(n){
+  n.props.mfa=!n.props.mfa;
+  const d=n.props.d3fend=n.props.d3fend||[];
+  const idx=d.findIndex(x=>x.id==='D3-MFA');
+  if(n.props.mfa){if(idx<0)d.push({id:'D3-MFA',name:'Multi-factor Authentication'});}
+  else{if(idx>=0)d.splice(idx,1);}
+}
+const MFA_TYPES=new Set(['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall']);
 function computeEaseOfAttack(n){
   const c=COMPONENTS[n.type]||{};
   if(c.redteam) return null; // attacker infra has no "ease of attack" from defender POV
@@ -1299,10 +1308,17 @@ function computeEaseOfAttack(n){
   if(strideD){delta+=strideD;factors.push({l:'STRIDE threats flagged',v:+strideD});}
   // Privileged container
   if(n.props.privileged){delta+=14;factors.push({l:'Privileged container',v:+14});}
+  // Internet-exposed — more reachable attack surface
+  if(n.props.internetExposed){delta+=8;factors.push({l:'Internet-exposed',v:+8});}
+  // MFA — most impactful single auth control; absence is also a penalty on capable types
+  if(MFA_TYPES.has(n.type)){
+    if(n.props.mfa){delta-=18;factors.push({l:'MFA enabled',v:-18});}
+    else{delta+=8;factors.push({l:'No MFA (auth-capable node)',v:+8});}
+  }
   // Security controls reduce ease
   const ctrls=(n.props.controls||[]).length;
   if(ctrls){delta-=ctrls*9;factors.push({l:`${ctrls} security control(s)`,v:-ctrls*9});}
-  // D3FEND countermeasures
+  // D3FEND countermeasures (-4 each; D3-MFA counted here when mfa prop is set, stacking with the MFA factor above)
   const d3c=(n.props.d3fend||[]).length;
   if(d3c){delta-=d3c*4;factors.push({l:`${d3c} D3FEND countermeasure(s)`,v:-d3c*4});}
   // Encryption at rest
@@ -1677,6 +1693,7 @@ function renderNodes(){
       ${!rt?(()=>{const ea=computeEaseOfAttack(n);if(!ea)return'';const el=easeLevel(ea.value);return`<g transform="translate(${R-5} ${R-5})" title="Ease of attack: ${ea.value}%"><circle r="9.5" fill="${el.c}" opacity=".88"/><text text-anchor="middle" y="3.5" style="font:bold 7px sans-serif;fill:#000">${ea.value}</text></g>`;})():''}
       ${n.free?`<circle r="${R+16}" fill="none" stroke="#f59e0b" stroke-width="1.5" opacity=".65" stroke-dasharray="3 4"/><g transform="translate(${R-4} ${-R+16})"><circle r="7.5" fill="#f59e0b"/><text text-anchor="middle" y="4" style="font:bold 9px sans-serif;fill:#000">⟐</text></g>`:''}
       ${n.props.internetExposed?`<g transform="translate(0 ${-(R+1)})"><circle r="9" fill="#3b82f6" stroke="#1e3a8a" stroke-width="1.2" opacity=".95"/><g transform="translate(-5.5 -5.5) scale(.46)" style="color:#fff">${ICONS.internet}</g></g>`:''}
+      ${n.props.mfa?`<g transform="translate(0 ${R+1})"><circle r="9" fill="#10b981" stroke="#065f46" stroke-width="1.2" opacity=".95"/><g transform="translate(-5.5 -5.5) scale(.46)" style="color:#fff">${ICONS.mfa}</g></g>`:''}
     `;
     g.appendChild(grp);
   });
@@ -2271,6 +2288,7 @@ function inspectorNode(n){
 
     <label class="switch ${n.props.internetExposed?'on':''}" id="f-inet" style="--offense:#3b82f6;margin-top:10px">
       <span>🌐 Exposed to Internet</span><span class="tg"></span></label>
+    ${['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall'].includes(n.type)?`<label class="switch ${n.props.mfa?'on':''}" id="f-mfa" style="--offense:#10b981;margin-top:6px"><span>🔑 Multi-Factor Authentication (MFA)</span><span class="tg"></span></label>`:''}
     <label class="switch ${n.free?'on':''}" id="f-free" style="--offense:#f59e0b;margin-top:6px">
       <span>⟐ Free movement <small style="color:var(--txt-2)">(no grid snap, ignores boundaries)</small></span><span class="tg"></span></label>
     <button class="del-btn" id="f-del">Delete node</button>`;
@@ -2379,6 +2397,7 @@ function wireInspector(){
   if($('f-label'))$('f-label').oninput=e=>{obj.label=e.target.value; renderNodes(); renderEdges(); renderBoundaries(); schedSave();};
   if($('f-notes'))$('f-notes').oninput=e=>{ (sel.type==='node'?obj.props:obj).notes=e.target.value; schedSave(); };
   if($('f-inet'))$('f-inet').onclick=()=>{const n=nodeAt(sel.id);n.props.internetExposed=!n.props.internetExposed;renderInspector();renderNodes();schedSave();toast(n.props.internetExposed?'Marked as internet-exposed 🌐':'Internet exposure cleared');};
+  if($('f-mfa'))$('f-mfa').onclick=()=>{const n=nodeAt(sel.id);toggleMFA(n);renderInspector();renderNodes();schedSave();toast(n.props.mfa?'MFA enabled 🔑':'MFA removed');};
   if($('f-free'))$('f-free').onclick=()=>{const n=nodeAt(sel.id); n.free=!n.free; renderInspector(); renderNodes(); schedSave(); toast(n.free?'Free movement enabled ⟐':'Snap to grid restored');};
   if($('f-pii'))$('f-pii').onclick=()=>{obj.props.pii=!obj.props.pii; renderInspector(); renderNodes(); renderAnalysis();};
   if($('f-off'))$('f-off').onclick=()=>{obj.offensive=!obj.offensive; renderInspector(); renderEdges(); renderAnalysis();};
@@ -3031,6 +3050,10 @@ canvas.addEventListener('contextmenu',e=>{
     if(!c.redteam&&!c.blueteam){
       items.push({icon:n.props.internetExposed?'🔒':'🌐', label:n.props.internetExposed?'Remove internet exposure':'Mark as internet-exposed', action:'toggle_inet'});
       ctxHandlers.toggle_inet=()=>{pushHistory();n.props.internetExposed=!n.props.internetExposed;render();schedSave();toast(n.props.internetExposed?`${n.label} — internet-exposed 🌐`:`Internet exposure cleared`);};
+      if(['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall'].includes(n.type)){
+        items.push({icon:n.props.mfa?'🔓':'🔑', label:n.props.mfa?'Remove MFA':'Enable MFA', action:'toggle_mfa'});
+        ctxHandlers.toggle_mfa=()=>{pushHistory();toggleMFA(n);render();schedSave();toast(n.props.mfa?`${n.label} — MFA enabled 🔑`:`MFA removed`);};
+      }
     }
     items.push('---');
     items.push({icon:'⚔️', label:'Toggle offensive flag', action:'toggle_off'});
