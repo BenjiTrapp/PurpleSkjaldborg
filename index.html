@@ -4618,11 +4618,12 @@ function loadSampleCEOFraud(){
     fraudExposure:'high', seSusceptibility:'High (Susceptible)', awarenessLevel:'Basic (General Training)', mfa:true});
   const ceo=N('persona_exec','CEO (Impersonated)',1000,490,{
     notes:'Identity spoofed in the lure — never actually involved. High-value whaling target.',
-    vip:true, fraudExposure:'critical', seSusceptibility:'Medium (Average)', awarenessLevel:'Intermediate (Annual Training)', mfa:true});
+    vip:true, impersonated:true, fraudExposure:'critical', seSusceptibility:'Medium (Average)', awarenessLevel:'Intermediate (Annual Training)', mfa:true});
   const erp=N('store','ERP / Wire Transfer Portal',1280,230,{
     stride:{T:true,I:true,R:true},pii:true,
     notes:'Payment initiation + approval workflow. Single-approval for "trusted" payees.'});
-  const bank=N('external','Beneficiary Bank (Mule Account)',1280,490,{
+  // Mule account is attacker-controlled — sits OUTSIDE the corporate trust zone (funds cross the boundary)
+  const bank=N('external','Beneficiary Bank (Mule Account)',1640,490,{
     notes:'Attacker-controlled mule account — funds cashed out & layered within minutes.',internetExposed:true});
 
   // ============================
@@ -4645,7 +4646,10 @@ function loadSampleCEOFraud(){
   const finBnd={id:uid('b'),type:'trust',x:920,y:150,w:520,h:430,label:'Finance Department',
     d3fend:[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-UBA',name:'User Behavior Analysis'}],
     attack:[],notes:'People + payment systems with financial authority',pii:false};
-  state.boundaries.push(atkBnd,emailBnd,finBnd);
+  const cashBnd={id:uid('b'),type:'redteam',x:1540,y:400,w:200,h:190,label:'Cash-Out (Attacker)',
+    d3fend:[],attack:[{id:'T1657',name:'Financial Theft'}],
+    notes:'Attacker-controlled mule account / money-laundering layer — outside corporate control',pii:false};
+  state.boundaries.push(atkBnd,emailBnd,finBnd,cashBnd);
 
   // ============================
   // LEGITIMATE FLOWS (blue)
