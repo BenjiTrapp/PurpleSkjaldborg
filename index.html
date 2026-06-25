@@ -488,6 +488,13 @@ const ICONS = {
   external:'<path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" fill="none" stroke="currentColor" stroke-width="1.6"/>',
   internet:'<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><ellipse cx="12" cy="12" rx="3.8" ry="10" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.3"/><ellipse cx="12" cy="6.5" rx="8.3" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/><ellipse cx="12" cy="17.5" rx="8.3" ry="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/>',
   mfa:'<circle cx="8" cy="9" r="3.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M11.8 9H21M20 9v3.5M17.5 9v2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  // Persona icons
+  person:'<circle cx="12" cy="7.5" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  person_admin:'<circle cx="10" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.9 3.1-7 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="18.5" cy="16.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M18.5 13v1.3M18.5 19.7V21M15 16.5h1.3M21.7 16.5H23M15.8 13.8l.9.9M21.3 19.3l-.9-.9M15.8 19.2l.9-.9M21.3 13.7l-.9.9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  person_dev:'<circle cx="9.5" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 20.5c0-3.9 3.1-7 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M15 13l-2.5 4 2.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13l2.5 4-2.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  person_vendor:'<circle cx="10" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.9 3.1-7 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="13.5" y="14.5" width="8" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M16 14.5v-1.5a1.5 1.5 0 0 1 3 0v1.5M13.5 17.5h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+  person_hood:'<path d="M12 2C8 2 5.5 5.2 5.5 9c0 1.8.6 3.5 1.7 4.8L6 22h12l-1.2-8.2c1.1-1.3 1.7-3 1.7-4.8C18.5 5.2 16 2 12 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+  person_shield:'<circle cx="10" cy="7.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 20c0-3.9 3.1-7 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M18.5 12l4.5 1.5v3c0 2.5-2 4.5-4.5 5.5-2.5-1-4.5-3-4.5-5.5v-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M16.5 17l1.5 1.5 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
   process:'<path d="M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7M12 2v2.5M12 19.5V22M22 12h-2.5M4.5 12H2M19 5l-1.8 1.8M6.8 17.2L5 19M19 19l-1.8-1.8M6.8 6.8L5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   store:'<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6M4 6c0 1.7 3.6 3 8 3s8-1.3 8-3M4 11c0 1.7 3.6 3 8 3s8-1.3 8-3M4 16c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/>',
   flow:'<path d="M4 12h14M13 6l6 6l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -565,6 +572,16 @@ const ICONS = {
 };
 
 const COMPONENTS = {
+  // ---- Personas & Human Actors ----
+  persona_user:    {label:'Employee',            sub:'user · staff · end-user',    icon:'person',        color:'#a855f7', kind:'node', persona:true, desc:'Regular employee — standard user account, most common phishing and social-engineering target.'},
+  persona_admin:   {label:'IT Admin',            sub:'sysadmin · root · helpdesk', icon:'person_admin',  color:'#f59e0b', kind:'node', persona:true, desc:'IT / System Administrator — elevated privileges and broad access; high-value lateral-movement target.'},
+  persona_dev:     {label:'Developer',           sub:'engineer · coder · devops',  icon:'person_dev',    color:'#14b8a6', kind:'node', persona:true, desc:'Software Developer or DevOps engineer — accesses source code, CI/CD pipelines, and secrets in env vars; supply-chain risk.'},
+  persona_exec:    {label:'Executive',           sub:'CEO · CISO · C-level · VIP', icon:'person',        color:'#60a5fa', kind:'node', persona:true, desc:'Executive / C-level — high-value Business Email Compromise (BEC) and spearphishing target; authority to approve transfers.'},
+  persona_vendor:  {label:'Vendor / Contractor', sub:'third-party · MSP · partner',icon:'person_vendor', color:'#f97316', kind:'node', persona:true, desc:'Third-party vendor, contractor, or MSP — supply-chain and third-party access risk; often bypasses internal security controls.'},
+  persona_rt:      {label:'Red Teamer',          sub:'operator · pentester',       icon:'person_hood',   color:'#ef4444', kind:'node', persona:true, redteam:true, desc:'Red Team operator — authorized adversary simulation persona. Represents the attacking team member in the model.'},
+  persona_bt:      {label:'Blue Teamer',         sub:'SOC analyst · IR · defender',icon:'person_shield', color:'#38bdf8', kind:'node', persona:true, blueteam:true, desc:'Blue Team analyst, SOC responder, or incident responder — defender persona; monitors, detects, and responds to threats.'},
+  persona_attacker:{label:'Threat Actor',        sub:'adversary · APT · criminal', icon:'person_hood',   color:'#dc2626', kind:'node', persona:true, redteam:true, desc:'External threat actor or APT group — unauthenticated adversary attempting to compromise the environment from outside.'},
+
   external:{label:'External Entity', sub:'client · system · dep', icon:'external', color:'#a855f7', kind:'node', desc:'Clients, other systems, dependencies — outside your control.'},
   process: {label:'Process',         sub:'dispatcher · validator', icon:'process', color:'#38bdf8', kind:'node', desc:'Architecture-centred functionality, e.g. dispatcher, input validator.'},
   store:   {label:'Data Store',      sub:'db · file system',      icon:'store',   color:'#22c55e', kind:'node', desc:'Database, file system, cache, object storage.'},
@@ -735,6 +752,15 @@ const NODE_DEFAULTS = {
   dnscat:{a:[['T1071.004','DNS'],['T1572','Protocol Tunneling'],['T1001','Data Obfuscation'],['T1048','Exfil over Alt Protocol']]},
   iodine:{a:[['T1071.004','DNS'],['T1572','Protocol Tunneling'],['T1090','Proxy']]},
   filetransfer:{a:[['T1105','Ingress Tool Transfer'],['T1197','BITS Jobs'],['T1570','Lateral Tool Transfer'],['T1048','Exfil over Alt Protocol']]},
+  // personas — default ATT&CK vectors targeting each role
+  persona_user:    {a:[['T1566','Phishing'],['T1078','Valid Accounts'],['T1539','Steal Web Session Cookie']]},
+  persona_exec:    {a:[['T1566','Phishing'],['T1528','Steal App Access Token'],['T1078','Valid Accounts']]},
+  persona_admin:   {a:[['T1078','Valid Accounts'],['T1558','Steal/Forge Kerberos Tickets'],['T1003','OS Credential Dumping']]},
+  persona_dev:     {a:[['T1552','Unsecured Credentials'],['T1195','Supply Chain Compromise'],['T1078','Valid Accounts']]},
+  persona_vendor:  {a:[['T1195','Supply Chain Compromise'],['T1078','Valid Accounts'],['T1566','Phishing']]},
+  persona_rt:      {a:[['T1583','Acquire Infrastructure'],['T1587','Develop Capabilities'],['T1588','Obtain Capabilities']]},
+  persona_attacker:{a:[['T1566','Phishing'],['T1190','Exploit Public-Facing Application'],['T1078','Valid Accounts']]},
+  persona_bt:      {d:[['D3-UBA','User Behavior Analysis'],['D3-PA','Process Analysis'],['D3-AL','Account Locking']]},
   // blue team -> D3FEND
   edr:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-PT','Process Termination']]},
   crowdstrike:{d:[['D3-PA','Process Analysis'],['D3-FA','File Analysis'],['D3-PT','Process Termination']]},
@@ -1262,6 +1288,9 @@ function opsecFor(n){
 // Base ease-of-attack score per component type (0 = nearly impossible, 100 = trivial)
 // Derived from: exposure, typical misconfigurations, public exploit availability
 const BASE_EASE = {
+  // Personas — ease reflects susceptibility to social engineering / credential attacks
+  persona_user:62, persona_exec:70, persona_vendor:68,
+  persona_dev:55,  persona_admin:50, persona_bt:28,
   // External actors — attacker-controlled, not a target
   external:20,
   // Core DFD elements
@@ -1292,7 +1321,17 @@ function toggleMFA(n){
   if(n.props.mfa){if(idx<0)d.push({id:'D3-MFA',name:'Multi-factor Authentication'});}
   else{if(idx>=0)d.splice(idx,1);}
 }
-const MFA_TYPES=new Set(['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall']);
+const MFA_TYPES=new Set(['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall','persona_user','persona_admin','persona_dev','persona_exec','persona_vendor','persona_bt']);
+// Personas that warrant a VIP / High-Value-Target flag (whaling, BEC, privileged access)
+const HVT_PERSONAS=new Set(['persona_exec','persona_admin']);
+// Fraud exposure scale — how much fraud could affect a human persona
+const FRAUD_LEVELS=[
+  {k:'critical',label:'Critical (BEC / CEO-fraud target · payment authority)', short:'Critical', color:'#ef4444'},
+  {k:'high',    label:'High (handles invoices / transfers / approvals)',       short:'High',     color:'#f97316'},
+  {k:'medium',  label:'Medium (some financial or data access)',                short:'Medium',   color:'#eab308'},
+  {k:'low',     label:'Low (limited financial reach)',                         short:'Low',      color:'#84cc16'},
+  {k:'minimal', label:'Minimal (no financial authority)',                      short:'Minimal',  color:'#64748b'},
+];
 function computeEaseOfAttack(n){
   const c=COMPONENTS[n.type]||{};
   if(c.redteam) return null; // attacker infra has no "ease of attack" from defender POV
@@ -1462,6 +1501,11 @@ function iconSvg(key,color,size=20){
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" style="color:${color}">${ICONS[key]}</svg>`;
 }
 const PGROUPS = [
+  // ── 0. Personas & Human Actors ───────────────────────────────────────────
+  {label:'Personas & Actors', items:['persona_user','persona_admin','persona_dev','persona_exec','persona_vendor'], subs:[
+    {label:'Security Roles', items:['persona_rt','persona_bt']},
+    {label:'Threat Actors',  items:['persona_attacker']}
+  ]},
   // ── 1. DFD-Bausteine ─────────────────────────────────────────────────────
   {label:'DFD Elements', items:['external','process','store'], subs:[
     {label:'Application Layer', items:['webapp','mobileapp','api','queue','cache','cdn','serverless']}
@@ -1668,32 +1712,47 @@ function renderNodes(){
     const grp=document.createElementNS(SVGNS,'g');
     grp.setAttribute('class','node'+(sel?' sel':'')); grp.setAttribute('transform',`translate(${n.x} ${n.y})`);
     grp.dataset.id=n.id;
-    const rt=c.redteam, bt=c.blueteam;
+    const rt=c.redteam, bt=c.blueteam, isPersona=!!c.persona;
     const ctrl=(n.props.controls||[]).length;
     const accent = rt?'var(--offense)':bt?'var(--trust)':c.color;
     const badge = rt? n.props.attack.length : bt? n.props.d3fend.length : countNodeThreats(n);
     const badgeCol = bt?'var(--trust)':'var(--danger)';
     const pii = n.props.pii;
+    // Stick-figure dimensions (R=34)
+    const hY=-(R*0.42), hR=R*0.30, bodyTop=hY+hR, bodyBot=R*0.46, armY=R*0.09, armW=R*0.46, legBot=R*0.88, legW=R*0.36;
+    const sw=sel?2.2:1.7;
     grp.innerHTML=`
       <circle class="hit" r="${R+22}"/>
-      ${ctrl?`<circle r="${R+13}" fill="none" stroke="var(--trust)" stroke-width="1.5" opacity=".6" stroke-dasharray="7 5" style="animation:dashmove 5s linear infinite"/>`:''}
-      ${(rt||bt)?`<circle r="${R+9}" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".5" stroke-dasharray="3 5" style="animation:dashmove ${rt?3:4}s linear infinite"/>`:''}
-      <circle r="${R+6}" fill="none" stroke="${accent}" stroke-width="1" opacity=".22"/>
-      <circle class="ring" r="${R}" fill="var(--bg-2)" stroke="${c.color}" stroke-width="${sel?2.4:1.6}" filter="url(#glow)"/>
-      <circle r="${R-5}" fill="none" stroke="${c.color}" stroke-width=".8" opacity=".4" stroke-dasharray="2 4"/>
-      <g transform="translate(-13 -13) scale(1.08)" style="color:${c.color}">${ICONS[c.icon]}</g>
+      ${isPersona?`
+        ${(rt||bt)?`<ellipse rx="${R*0.55}" ry="${R*0.97}" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".45" stroke-dasharray="3 5" style="animation:dashmove ${rt?3:4}s linear infinite"/>`:``}
+        <ellipse rx="${R*0.55}" ry="${R*0.97}" fill="none" stroke="${sel?c.color:'transparent'}" stroke-width="${sel?2.2:0}" filter="${sel?'url(#glow)':'none'}"/>
+        <circle cx="0" cy="${hY}" r="${hR}" fill="var(--bg-1)" stroke="${c.color}" stroke-width="${sw}"/>
+        <line x1="0" y1="${bodyTop}" x2="0" y2="${bodyBot}" stroke="${c.color}" stroke-width="${sw}" stroke-linecap="round"/>
+        <line x1="${-armW}" y1="${armY}" x2="${armW}" y2="${armY}" stroke="${c.color}" stroke-width="${sw}" stroke-linecap="round"/>
+        <line x1="0" y1="${bodyBot}" x2="${-legW}" y2="${legBot}" stroke="${c.color}" stroke-width="${sw}" stroke-linecap="round"/>
+        <line x1="0" y1="${bodyBot}" x2="${legW}" y2="${legBot}" stroke="${c.color}" stroke-width="${sw}" stroke-linecap="round"/>
+      `:`
+        ${ctrl?`<circle r="${R+13}" fill="none" stroke="var(--trust)" stroke-width="1.5" opacity=".6" stroke-dasharray="7 5" style="animation:dashmove 5s linear infinite"/>`:``}
+        ${(rt||bt)?`<circle r="${R+9}" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".5" stroke-dasharray="3 5" style="animation:dashmove ${rt?3:4}s linear infinite"/>`:``}
+        <circle r="${R+6}" fill="none" stroke="${accent}" stroke-width="1" opacity=".22"/>
+        <circle class="ring" r="${R}" fill="var(--bg-2)" stroke="${c.color}" stroke-width="${sel?2.4:1.6}" filter="url(#glow)"/>
+        <circle r="${R-5}" fill="none" stroke="${c.color}" stroke-width=".8" opacity=".4" stroke-dasharray="2 4"/>
+        <g transform="translate(-13 -13) scale(1.08)" style="color:${c.color}">${ICONS[c.icon]}</g>
+      `}
       <text class="node-label" y="${R+18}">${esc(n.label)}</text>
       <text class="node-sub" y="${R+31}">${c.label}</text>
       ${badge?`<g transform="translate(${R-6} ${-R+2})"><circle r="9" fill="${badgeCol}"/><text class="node-badge" text-anchor="middle" y="3">${badge}</text></g>`:''}
-      ${rt?(()=>{const det=computeRedTeamDetection(n);const ops=opsecFor(n);const bl=bustRiskLevel(det.bustRisk);const ringC=bl.c;return`<circle r="${R+17}" fill="none" stroke="${ringC}" stroke-width="2" opacity="${det.bustRisk>5?'.55':'.2'}" stroke-dasharray="5 4" style="animation:dashmove ${2+ops.level*.4}s linear infinite reverse"/><g transform="translate(${R-5} ${R-5})"><circle r="9.5" fill="${ringC}" opacity=".9"/><text text-anchor="middle" y="3.5" style="font:bold 7px sans-serif;fill:#000">${det.bustRisk}%</text></g>`;})():''}
-      ${rt?`<g transform="translate(${-R+3} ${R-3})"><circle r="8.5" fill="var(--offense)"/><g transform="translate(-5.5 -5.5) scale(.62)">${ICONS.sword}</g></g>`:''}
-      ${bt?`<g transform="translate(${-R+3} ${R-3})"><circle r="8.5" fill="var(--trust)"/><g transform="translate(-6 -6) scale(.5)" style="color:#04222e">${ICONS.trust}</g></g>`:''}
+      ${rt&&!isPersona?(()=>{const det=computeRedTeamDetection(n);const ops=opsecFor(n);const bl=bustRiskLevel(det.bustRisk);const ringC=bl.c;return`<circle r="${R+17}" fill="none" stroke="${ringC}" stroke-width="2" opacity="${det.bustRisk>5?'.55':'.2'}" stroke-dasharray="5 4" style="animation:dashmove ${2+ops.level*.4}s linear infinite reverse"/><g transform="translate(${R-5} ${R-5})"><circle r="9.5" fill="${ringC}" opacity=".9"/><text text-anchor="middle" y="3.5" style="font:bold 7px sans-serif;fill:#000">${det.bustRisk}%</text></g>`;})():''}
+      ${rt?`<g transform="translate(${-R+3} ${isPersona?legBot-3:R-3})"><circle r="8.5" fill="var(--offense)"/><g transform="translate(-5.5 -5.5) scale(.62)">${ICONS.sword}</g></g>`:''}
+      ${bt?`<g transform="translate(${-R+3} ${isPersona?legBot-3:R-3})"><circle r="8.5" fill="var(--trust)"/><g transform="translate(-6 -6) scale(.5)" style="color:#04222e">${ICONS.trust}</g></g>`:''}
       ${ctrl&&!rt&&!bt?`<g transform="translate(${-R+3} ${R-3})"><circle r="9" fill="var(--trust)" stroke="var(--bg-1)" stroke-width="1.5"/><g transform="translate(-6.5 -6.5) scale(.54)" style="color:#04222e">${ICONS.trust}</g><text class="node-badge" x="11" y="-5" style="fill:var(--trust-glow)">${ctrl}</text></g>`:''}
       ${pii&&!rt&&!bt?`<g transform="translate(${-R+4} ${-R+2})"><circle r="9" fill="var(--privacy)"/><g transform="translate(-6 -6) scale(.5)" style="color:#06210f">${ICONS.privacy}</g></g>`:''}
       ${!rt?(()=>{const ea=computeEaseOfAttack(n);if(!ea)return'';const el=easeLevel(ea.value);return`<g transform="translate(${R-5} ${R-5})" title="Ease of attack: ${ea.value}%"><circle r="9.5" fill="${el.c}" opacity=".88"/><text text-anchor="middle" y="3.5" style="font:bold 7px sans-serif;fill:#000">${ea.value}</text></g>`;})():''}
       ${n.free?`<circle r="${R+16}" fill="none" stroke="#f59e0b" stroke-width="1.5" opacity=".65" stroke-dasharray="3 4"/><g transform="translate(${R-4} ${-R+16})"><circle r="7.5" fill="#f59e0b"/><text text-anchor="middle" y="4" style="font:bold 9px sans-serif;fill:#000">⟐</text></g>`:''}
       ${n.props.internetExposed?`<g transform="translate(0 ${-(R+1)})"><circle r="9" fill="#3b82f6" stroke="#1e3a8a" stroke-width="1.2" opacity=".95"/><g transform="translate(-5.5 -5.5) scale(.46)" style="color:#fff">${ICONS.internet}</g></g>`:''}
       ${n.props.mfa?`<g transform="translate(0 ${R+1})"><circle r="9" fill="#10b981" stroke="#065f46" stroke-width="1.2" opacity=".95"/><g transform="translate(-5.5 -5.5) scale(.46)" style="color:#fff">${ICONS.mfa}</g></g>`:''}
+      ${isPersona&&n.props.vip?`<g transform="translate(${R*0.5} ${-R*0.78})"><circle r="9.5" fill="#eab308" stroke="#854d0e" stroke-width="1.2"/><text text-anchor="middle" y="3.6" style="font:11px sans-serif">⭐</text></g>`:''}
+      ${isPersona&&n.props.fraudExposure?(()=>{const fl=FRAUD_LEVELS.find(l=>l.k===n.props.fraudExposure);if(!fl)return'';return`<g transform="translate(${-R*0.55} ${R*0.78})" title="Fraud exposure: ${fl.short}"><circle r="9.5" fill="${fl.color}" stroke="var(--bg-1)" stroke-width="1.2"/><text text-anchor="middle" y="3.6" style="font:10px sans-serif">💸</text></g>`;})():''}
     `;
     g.appendChild(grp);
   });
@@ -1985,12 +2044,13 @@ function autoArrange(){
   const NET_TYPES=new Set(['lb','nat_gw','vpn_gw','proxy','sdwan','nac','firewall','waf','ids','casb','dlp','dns_srv','mail_gw']);
   const PIVOT_TYPES=new Set(['ligolo','sshtunnel','chisel','sshuttle','socatpivot','proxychains','rpivot','dnscat','iodine','lolbin','loldriver','filetransfer']);
   const GREY_TYPES=new Set(['grey','redirector']);
+  const PERSONA_EXT=new Set(['persona_user','persona_admin','persona_dev','persona_exec','persona_vendor']);
 
   const groups={ext:[],net:[],corp:[],k8s:[],cloud:[],iam:[],blueteam:[],grey:[],pivot:[],redteam:[]};
 
   state.nodes.forEach(n=>{
     const c=COMPONENTS[n.type]||{};
-    if(n.type==='external')               groups.ext.push(n);
+    if(n.type==='external'||PERSONA_EXT.has(n.type)) groups.ext.push(n);
     else if(K8S_TYPES.has(n.type))        groups.k8s.push(n);
     else if(CLOUD_TYPES.has(n.type))      groups.cloud.push(n);
     else if(IAM_TYPES.has(n.type))        groups.iam.push(n);
@@ -2147,7 +2207,83 @@ function inspectorNode(n){
     <button class="tbtn" style="width:100%;margin-top:6px;justify-content:center" id="pick-d3fend">+ Map D3FEND countermeasure</button>`;
 
   let banner='', body='';
-  if(rt){
+  const isPersona=!!c.persona;
+  if(isPersona){
+    const isAttacker=c.redteam;
+    body=`
+    ${isAttacker?`<div class="an-card" style="border-color:#ef444455;background:#ef44440f">
+      <h4 style="color:#fca5a5">☠ Offensive Actor</h4>
+      <p style="font-size:11px;color:var(--txt-1)">Profile this actor's threat posture via motivation and sophistication.</p></div>`
+    :`<div class="an-card" style="border-color:#a855f755;background:#a855f70a">
+      <h4 style="color:#c084fc">👤 Human Actor</h4>
+      <p style="font-size:11px;color:var(--txt-1)">Profile this persona's security posture and social engineering risk.</p></div>`}
+    ${!isAttacker?`
+    <div class="field" style="margin-top:12px"><label>🎣 Social Engineering Susceptibility</label>
+      <select id="f-se-susceptibility">
+        <option value="">— Not assessed —</option>
+        ${['Critical (Easily Deceived)','High (Susceptible)','Medium (Average)','Low (Vigilant)','Resistant (Security Champion)'].map(v=>`<option value="${v}" ${(n.props.seSusceptibility||'')==v?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>🧠 Security Awareness Level</label>
+      <select id="f-awareness">
+        <option value="">— Not assessed —</option>
+        ${['None (Unaware)','Basic (General Training)','Intermediate (Annual Training)','Advanced (Role-based Training)','Security-Conscious (Champion)'].map(v=>`<option value="${v}" ${(n.props.awarenessLevel||'')==v?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>💸 Fraud Exposure <small style="font-weight:400;color:var(--txt-2)">(how much could fraud affect them)</small></label>
+      <select id="f-fraud">
+        <option value="">— Not assessed —</option>
+        ${FRAUD_LEVELS.map(l=>`<option value="${l.k}" ${(n.props.fraudExposure||'')==l.k?'selected':''}>${l.label}</option>`).join('')}
+      </select></div>
+    ${HVT_PERSONAS.has(n.type)?`<label class="switch ${n.props.vip?'on':''}" id="f-vip" style="--offense:#eab308;margin-top:10px">
+      <span>⭐ VIP / High-Value Target <small style="color:var(--txt-2)">(priority for attackers — whaling, BEC)</small></span><span class="tg"></span></label>`:''}`
+    :`
+    <div class="field" style="margin-top:10px"><label>🎯 Motivation</label>
+      <select id="f-motivation">
+        <option value="">— Unknown —</option>
+        ${['Financial','Espionage / IP Theft','Hacktivism','Insider Threat','Nation-State APT','Vandalism / Disruption','Script Kiddie','Ransomware / Extortion'].map(m=>`<option value="${m}" ${(n.props.motivation||'')==m?'selected':''}>${m}</option>`).join('')}
+      </select></div>
+    <div class="field"><label>📊 Sophistication</label>
+      <select id="f-sophistication">
+        <option value="">— Unknown —</option>
+        ${['Low (Script Kiddie)','Medium (Intermediate)','High (Advanced)','Expert (Red Team / APT)','Nation-State'].map(s=>`<option value="${s}" ${(n.props.sophistication||'')==s?'selected':''}>${s}</option>`).join('')}
+      </select></div>
+    <div class="sec-title" style="margin-top:14px">🎭 Attacker Profile</div>
+    <div class="field"><label>Alias / Handle</label>
+      <input type="text" id="f-alias" placeholder="Codename, nickname or threat-group label…" value="${esc(n.props.alias||'')}"></div>
+    <div class="field"><label>💬 Motto / Quote</label>
+      <textarea id="f-motto" placeholder="A line that captures their mindset or attitude…" style="min-height:48px">${esc(n.props.motto||'')}</textarea></div>
+    <div class="sec-title" style="margin-top:12px">🎯 Intent <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--txt-2)">(select all that apply)</small></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 2px 10px">
+      ${[
+        {k:'espionage',  icon:'🕵️', label:'Espionage',   sub:'Confidentiality', col:'#60a5fa'},
+        {k:'destructive',icon:'💥', label:'Destructive',  sub:'Integrity',       col:'#f97316'},
+        {k:'disruptive', icon:'⚡', label:'Disruptive',   sub:'Availability',    col:'#facc15'},
+        {k:'cybercrime', icon:'💰', label:'Cyber-Crime',  sub:'Financial profit',col:'#4ade80'},
+      ].map(i=>{
+        const on=(n.props.intent||[]).includes(i.k);
+        return `<label data-intent="${i.k}" style="display:flex;align-items:flex-start;gap:7px;padding:7px 9px;border-radius:7px;border:1px solid ${on?i.col+'88':'var(--border)'};background:${on?i.col+'14':'var(--bg-2)'};cursor:pointer;transition:.15s">
+          <input type="checkbox" data-intent="${i.k}" ${on?'checked':''} style="margin-top:2px;accent-color:${i.col}">
+          <span><span style="font-size:12px;font-weight:600;color:${on?i.col:'var(--txt-1)'}">${i.icon} ${i.label}</span><br>
+          <span style="font-size:10px;color:var(--txt-2)">${i.sub}</span></span></label>`;
+      }).join('')}
+    </div>
+    <div class="field"><label>⚙️ Capability Level</label>
+      <select id="f-capability">
+        <option value="">— Not assessed —</option>
+        ${[
+          {v:'script-kiddie',  l:'Script Kiddie — Tools only, no original exploits'},
+          {v:'intermediate',   l:'Intermediate — Some custom tooling, targeted attacks'},
+          {v:'advanced',       l:'Advanced — Evasion, custom malware, persistent access'},
+          {v:'expert',         l:'Expert (APT) — Sophisticated, long-term campaigns'},
+          {v:'nation-state',   l:'Nation-State — Unlimited resources, zero-days, espionage'},
+        ].map(o=>`<option value="${o.v}" ${(n.props.capability||'')==o.v?'selected':''}>${o.l}</option>`).join('')}
+      </select></div>
+    <div class="sec-title" style="margin-top:12px">🗺️ Needs <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--txt-2)">(goals — bad for us)</small></div>
+    <div class="field">
+      <textarea id="f-attacker-goals" placeholder="What this actor wants to achieve — their objectives and the outcomes that hurt the defender…" style="min-height:72px">${esc(n.props.attackerGoals||'')}</textarea></div>
+    <div class="sec-title" style="margin-top:10px">🚧 Obstacles <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--txt-2)">(they help us detect / stop them)</small></div>
+    <div class="field">
+      <textarea id="f-attacker-obstacles" placeholder="What gets in their way — friction, mistakes or detection points the defender can exploit…" style="min-height:72px">${esc(n.props.attackerObstacles||'')}</textarea></div>`}`;
+  }else if(rt){
     const ops=opsecFor(n);
     const det=computeRedTeamDetection(n);
     const bl=bustRiskLevel(det.bustRisk);
@@ -2265,7 +2401,7 @@ function inspectorNode(n){
     ${banner}
     <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Domain context, assumptions…">${esc(n.props.notes||'')}</textarea></div>
     ${body}
-    ${(()=>{const ea=computeEaseOfAttack(n);if(!ea)return'';const el=easeLevel(ea.value);const adj=n.props.easeAdjust||0;const factorRows=ea.factors.map(f=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:${f.v>0?'#fca5a5':'#86efac'};padding:1px 0"><span>${f.l}</span><b>${f.v>0?'+':''}${f.v}</b></div>`).join('');return`
+    ${isPersona?'':(()=>{const ea=computeEaseOfAttack(n);if(!ea)return'';const el=easeLevel(ea.value);const adj=n.props.easeAdjust||0;const factorRows=ea.factors.map(f=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:${f.v>0?'#fca5a5':'#86efac'};padding:1px 0"><span>${f.l}</span><b>${f.v>0?'+':''}${f.v}</b></div>`).join('');return`
     <div class="sec-title">⚡ Ease of Attack</div>
     <div style="margin:2px 2px 10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -2282,13 +2418,12 @@ function inspectorNode(n){
       <div style="font-size:10px;color:var(--txt-2);margin-bottom:3px">Base: ${ea.base} (${c.label})${ea.factors.length?'  ·  modifiers:':''}</div>
       ${factorRows}
     </div>`;})()}
-    <div class="field" style="margin-top:14px"><label>PASTA stage relevance</label>
+    ${isPersona?'':(`<div class="field" style="margin-top:14px"><label>PASTA stage relevance</label>
       <select id="f-pasta"><option value="">—</option>
-      ${PASTA.map(p=>`<option value="${p.n}" ${n.props.pasta==p.n?'selected':''}>Stage ${p.n}: ${p.t}</option>`).join('')}</select></div>
-
-    <label class="switch ${n.props.internetExposed?'on':''}" id="f-inet" style="--offense:#3b82f6;margin-top:10px">
-      <span>🌐 Exposed to Internet</span><span class="tg"></span></label>
-    ${['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall'].includes(n.type)?`<label class="switch ${n.props.mfa?'on':''}" id="f-mfa" style="--offense:#10b981;margin-top:6px"><span>🔑 Multi-Factor Authentication (MFA)</span><span class="tg"></span></label>`:''}
+      ${PASTA.map(p=>`<option value="${p.n}" ${n.props.pasta==p.n?'selected':''}>Stage ${p.n}: ${p.t}</option>`).join('')}</select></div>`)}
+    ${isPersona?'':(`<label class="switch ${n.props.internetExposed?'on':''}" id="f-inet" style="--offense:#3b82f6;margin-top:10px">
+      <span>🌐 Exposed to Internet</span><span class="tg"></span></label>`)}
+    ${MFA_TYPES.has(n.type)?`<label class="switch ${n.props.mfa?'on':''}" id="f-mfa" style="--offense:#10b981;margin-top:6px"><span>🔑 Multi-Factor Authentication (MFA)</span><span class="tg"></span></label>`:''}
     <label class="switch ${n.free?'on':''}" id="f-free" style="--offense:#f59e0b;margin-top:6px">
       <span>⟐ Free movement <small style="color:var(--txt-2)">(no grid snap, ignores boundaries)</small></span><span class="tg"></span></label>
     <button class="del-btn" id="f-del">Delete node</button>`;
@@ -2396,6 +2531,27 @@ function wireInspector(){
   };
   if($('f-label'))$('f-label').oninput=e=>{obj.label=e.target.value; renderNodes(); renderEdges(); renderBoundaries(); schedSave();};
   if($('f-notes'))$('f-notes').oninput=e=>{ (sel.type==='node'?obj.props:obj).notes=e.target.value; schedSave(); };
+  if($('f-motivation'))$('f-motivation').onchange=e=>{const n=nodeAt(sel.id);n.props.motivation=e.target.value;schedSave();};
+  if($('f-sophistication'))$('f-sophistication').onchange=e=>{const n=nodeAt(sel.id);n.props.sophistication=e.target.value;schedSave();};
+  if($('f-se-susceptibility'))$('f-se-susceptibility').onchange=e=>{const n=nodeAt(sel.id);n.props.seSusceptibility=e.target.value;schedSave();};
+  if($('f-awareness'))$('f-awareness').onchange=e=>{const n=nodeAt(sel.id);n.props.awarenessLevel=e.target.value;schedSave();};
+  if($('f-fraud'))$('f-fraud').onchange=e=>{const n=nodeAt(sel.id);n.props.fraudExposure=e.target.value;schedSave();};
+  if($('f-vip'))$('f-vip').onclick=()=>{const n=nodeAt(sel.id);n.props.vip=!n.props.vip;schedSave();renderInspector();};
+  if($('f-alias'))$('f-alias').oninput=e=>{const n=nodeAt(sel.id);n.props.alias=e.target.value;schedSave();};
+  if($('f-motto'))$('f-motto').oninput=e=>{const n=nodeAt(sel.id);n.props.motto=e.target.value;schedSave();};
+  if($('f-capability'))$('f-capability').onchange=e=>{const n=nodeAt(sel.id);n.props.capability=e.target.value;schedSave();};
+  if($('f-attacker-goals'))$('f-attacker-goals').oninput=e=>{const n=nodeAt(sel.id);n.props.attackerGoals=e.target.value;schedSave();};
+  if($('f-attacker-obstacles'))$('f-attacker-obstacles').oninput=e=>{const n=nodeAt(sel.id);n.props.attackerObstacles=e.target.value;schedSave();};
+  document.querySelectorAll('[data-intent]').forEach(el=>{
+    if(el.tagName==='INPUT')el.onchange=()=>{
+      const n=nodeAt(sel.id);
+      n.props.intent=n.props.intent||[];
+      const k=el.dataset.intent;
+      if(el.checked){if(!n.props.intent.includes(k))n.props.intent.push(k);}
+      else{n.props.intent=n.props.intent.filter(x=>x!==k);}
+      schedSave(); renderInspector();
+    };
+  });
   if($('f-inet'))$('f-inet').onclick=()=>{const n=nodeAt(sel.id);n.props.internetExposed=!n.props.internetExposed;renderInspector();renderNodes();schedSave();toast(n.props.internetExposed?'Marked as internet-exposed 🌐':'Internet exposure cleared');};
   if($('f-mfa'))$('f-mfa').onclick=()=>{const n=nodeAt(sel.id);toggleMFA(n);renderInspector();renderNodes();schedSave();toast(n.props.mfa?'MFA enabled 🔑':'MFA removed');};
   if($('f-free'))$('f-free').onclick=()=>{const n=nodeAt(sel.id); n.free=!n.free; renderInspector(); renderNodes(); schedSave(); toast(n.free?'Free movement enabled ⟐':'Snap to grid restored');};
@@ -3012,7 +3168,44 @@ canvas.addEventListener('contextmenu',e=>{
       ctxHandlers[`stride_${k}`]=()=>{ pushHistory(); n.props.stride[k]=!n.props.stride[k]; render(); schedSave(); toast(`${s.k} ${n.props.stride[k]?'flagged ⚠️':'cleared'} on ${n.label}`); };
     };
 
-    if(DATA_STORE_TYPES.has(n.type)){
+    if(c.persona){
+      const isAttacker=c.redteam;
+      // Free movement — useful for every persona
+      items.push({icon:'⟐', label:n.free?'Snap to grid':'Free movement (no snap)', action:'toggle_free'});
+      ctxHandlers.toggle_free=()=>{ pushHistory(); n.free=!n.free; render(); schedSave(); toast(n.free?'Free movement enabled ⟐':'Snap to grid restored'); };
+
+      if(isAttacker){
+        // Intent quick-toggles (CIA-impact dimensions)
+        const INTENTS=[
+          {k:'espionage',  icon:'🕵️', label:'Espionage'},
+          {k:'destructive',icon:'💥', label:'Destructive'},
+          {k:'disruptive', icon:'⚡', label:'Disruptive'},
+          {k:'cybercrime', icon:'💰', label:'Cyber-Crime'},
+        ];
+        INTENTS.forEach(it=>{
+          const on=(n.props.intent||[]).includes(it.k);
+          items.push({icon:on?'✅':it.icon, label:`${on?'Clear':'Set'} intent — ${it.label}`, action:`intent_${it.k}`});
+          ctxHandlers[`intent_${it.k}`]=()=>{ pushHistory(); n.props.intent=n.props.intent||[]; if(on)n.props.intent=n.props.intent.filter(x=>x!==it.k); else n.props.intent.push(it.k); renderInspector(); render(); schedSave(); toast(`${it.label} ${on?'cleared':'set'} on ${n.label}`); };
+        });
+      } else {
+        // MFA — auth-capable human personas
+        if(MFA_TYPES.has(n.type)){
+          items.push({icon:n.props.mfa?'🔓':'🔑', label:n.props.mfa?'Remove MFA':'Enable MFA', action:'toggle_mfa'});
+          ctxHandlers.toggle_mfa=()=>{ pushHistory(); toggleMFA(n); render(); schedSave(); toast(n.props.mfa?`${n.label} — MFA enabled 🔑`:`MFA removed`); };
+        }
+        // VIP / High-Value Target — executives & admins
+        if(HVT_PERSONAS.has(n.type)){
+          items.push({icon:n.props.vip?'☆':'⭐', label:n.props.vip?'Clear VIP / High-Value Target':'Mark as VIP / High-Value Target', action:'toggle_vip'});
+          ctxHandlers.toggle_vip=()=>{ pushHistory(); n.props.vip=!n.props.vip; render(); schedSave(); toast(n.props.vip?`${n.label} — VIP / High-Value Target ⭐`:`VIP flag cleared`); };
+        }
+        // Fraud exposure — cycle through scale (incl. clearing)
+        const curFi=FRAUD_LEVELS.findIndex(l=>l.k===n.props.fraudExposure);
+        const curFl=curFi>=0?FRAUD_LEVELS[curFi]:null;
+        const nextFl=curFi>=FRAUD_LEVELS.length-1?null:FRAUD_LEVELS[curFi+1]; // wraps past last → cleared
+        items.push({icon:'💸', label:`Fraud exposure: ${curFl?curFl.short:'—'} → ${nextFl?nextFl.short:'clear'}`, action:'cycle_fraud'});
+        ctxHandlers.cycle_fraud=()=>{ pushHistory(); n.props.fraudExposure=nextFl?nextFl.k:''; render(); schedSave(); toast(nextFl?`Fraud exposure → ${nextFl.short} 💸`:`Fraud exposure cleared`); };
+      }
+    } else if(DATA_STORE_TYPES.has(n.type)){
       items.push({icon:n.props.pii?'🔓':'🔒', label:n.props.pii?'Clear PII / sensitive flag':'Mark as PII / sensitive data', action:'toggle_pii'});
       ctxHandlers.toggle_pii=()=>{ pushHistory(); n.props.pii=!n.props.pii; render(); schedSave(); toast(n.props.pii?`${n.label} marked as PII 🔒`:`PII flag cleared`); };
       const enc=n.props.encryptedAtRest;
@@ -3047,7 +3240,7 @@ canvas.addEventListener('contextmenu',e=>{
       }
     }
 
-    if(!c.redteam&&!c.blueteam){
+    if(!c.redteam&&!c.blueteam&&!c.persona){
       items.push({icon:n.props.internetExposed?'🔒':'🌐', label:n.props.internetExposed?'Remove internet exposure':'Mark as internet-exposed', action:'toggle_inet'});
       ctxHandlers.toggle_inet=()=>{pushHistory();n.props.internetExposed=!n.props.internetExposed;render();schedSave();toast(n.props.internetExposed?`${n.label} — internet-exposed 🌐`:`Internet exposure cleared`);};
       if(['external','api','cloud','iam','webapp','ad','siem','process','vm','firewall'].includes(n.type)){
@@ -3056,8 +3249,10 @@ canvas.addEventListener('contextmenu',e=>{
       }
     }
     items.push('---');
-    items.push({icon:'⚔️', label:'Toggle offensive flag', action:'toggle_off'});
-    items.push('---');
+    if(!c.persona||c.redteam){
+      items.push({icon:'⚔️', label:'Toggle offensive flag', action:'toggle_off'});
+      items.push('---');
+    }
     items.push({icon:'🗑️', label:'Delete', action:'delete', danger:true, key:'Del'});
     ctxHandlers.rename=()=>{const lbl=prompt('Rename node:',n.label); if(lbl!==null){n.label=lbl; render();}};
     ctxHandlers.duplicate=()=>{const dn=addNodeSilent(n.type,n.x+55,n.y+55);dn.label=n.label+' (copy)';render();toast('Node duplicated');};
@@ -3621,7 +3816,8 @@ const SAMPLE_LIBRARY = [
   {id:'k8s-attack', title:'Kubernetes Cluster Compromise', desc:'Container escape → Node takeover → Secrets exfiltration → Lateral movement to cloud. RBAC bypass and supply chain attack.', tags:['Kubernetes','Cloud','Container Escape','RBAC']},
   {id:'cloud-breach', title:'Cloud Identity Breach (Azure)', desc:'Stolen OAuth token → Entra ID takeover → Cross-tenant pivoting → Data exfiltration from Storage/KeyVault.', tags:['Azure','Identity','OAuth','Cloud']},
   {id:'supply-chain', title:'Supply Chain Attack (CI/CD)', desc:'Compromised dependency → Poisoned pipeline → Artifact injection → Production deployment of backdoor.', tags:['CI/CD','Supply Chain','GitHub Actions','Docker']},
-  {id:'ransomware', title:'Ransomware (Double Extortion)', desc:'Initial access via RDP brute-force → Cobalt Strike → Disable EDR → Data exfil → Volume Shadow Copy deletion → Deploy ransomware via GPO.', tags:['Ransomware','AD','GPO','Double Extortion']}
+  {id:'ransomware', title:'Ransomware (Double Extortion)', desc:'Initial access via RDP brute-force → Cobalt Strike → Disable EDR → Data exfil → Volume Shadow Copy deletion → Deploy ransomware via GPO.', tags:['Ransomware','AD','GPO','Double Extortion']},
+  {id:'ceo-fraud', title:'Phishing & CEO Fraud (BEC)', desc:'No malware — pure social engineering. Threat actor impersonates the CEO via a lookalike domain → pressures an AP finance clerk → fraudulent wire transfer to a mule account. Models human personas, fraud exposure & awareness.', tags:['BEC','Phishing','Social Engineering','Personas','Wire Fraud']}
 ];
 
 function showLibrary(){
@@ -3660,7 +3856,8 @@ function loadScenario(id){
     'k8s-attack': loadSampleK8s,
     'cloud-breach': loadSampleCloud,
     'supply-chain': loadSampleSupplyChain,
-    'ransomware': loadSampleRansomware
+    'ransomware': loadSampleRansomware,
+    'ceo-fraud': loadSampleCEOFraud
   };
   if(loaders[id]) loaders[id]();
   else toast('Scenario not found');
@@ -3867,7 +4064,8 @@ function loadSampleCobaltBeacon(){
   // ============================
   // TARGET EMPLOYEE — center
   // ============================
-  const user=N('external','Target Employee',700,280,{notes:'Finance department — high-value target for BEC, handles wire transfers'});
+  const user=N('persona_user','Target Employee',700,280,{notes:'Finance department — high-value target for BEC, handles wire transfers',
+    fraudExposure:'high', seSusceptibility:'High (Susceptible)', awarenessLevel:'Basic (General Training)', mfa:true});
 
   // ============================
   // CORPORATE NETWORK — center-right
@@ -4369,6 +4567,122 @@ function loadSampleRansomware(){
   backup.props.d3fend=[{id:'D3-ACH',name:'Application Config Hardening'}];
 
   applyPiiZones(); select(null); render(); fitView(); pushHistory(); schedSave(); toast('Ransomware (Double Extortion) loaded');
+}
+
+function loadSampleCEOFraud(){
+  state={nodes:[],edges:[],boundaries:[],seq:1};
+  const N=(t,l,x,y,extra={})=>{const n=addNodeSilent(t,x,y);n.label=l;Object.assign(n.props,extra);return n;};
+
+  // ============================
+  // THREAT ACTOR — left (BEC / social engineering crew)
+  // ============================
+  const attacker=N('persona_attacker','BEC Threat Actor',150,360,{
+    notes:'Business Email Compromise crew — no malware, pure social engineering & impersonation.',
+    alias:'"FinPhish" crew',
+    motto:'Why hack the firewall when you can ask Accounts Payable nicely?',
+    intent:['cybercrime'],
+    capability:'intermediate',
+    motivation:'Financial',
+    sophistication:'Medium (Intermediate)',
+    attackerGoals:'Trick a finance employee with payment authority into wiring funds to a mule account. Impersonate the CEO with a believable, urgent, confidential request.',
+    attackerObstacles:'Strict DMARC/SPF/DKIM enforcement, payment dual-approval / call-back policy, a security-aware clerk who verifies out-of-band.',
+    attack:[{id:'T1589',name:'Gather Victim Identity Information'},{id:'T1591',name:'Gather Victim Org Information'},{id:'T1656',name:'Impersonation'},{id:'T1566',name:'Phishing'},{id:'T1657',name:'Financial Theft'}]});
+  const phishkit=N('process','Spoofing / Lure Builder',150,180,{
+    notes:'Crafts the "urgent wire transfer" CEO lure — display-name spoof + reply-to redirect.',
+    attack:[{id:'T1566.002',name:'Spearphishing Link'},{id:'T1534',name:'Internal Spearphishing'}],internetExposed:true});
+  const lookalike=N('external','Lookalike Domain (c0mpany.com)',150,540,{
+    notes:'Typo-squatted domain registered hours before the campaign — passes naive SPF.',
+    attack:[{id:'T1583.001',name:'Acquire Infrastructure: Domains'},{id:'T1656',name:'Impersonation'}],internetExposed:true});
+
+  // ============================
+  // CORPORATE EMAIL — center
+  // ============================
+  const seg=N('process','Email Gateway (SEG / DMARC)',460,360,{
+    notes:'Secure Email Gateway — DMARC set to p=quarantine (not reject), display-name spoof slips through.',internetExposed:true});
+  const m365=N('webapp','Microsoft 365 Mailbox',720,360,{
+    notes:'Cloud mailbox — inbox rules, no external-sender banner configured.',internetExposed:true,mfa:true});
+
+  // ============================
+  // FINANCE DEPARTMENT — people & systems (right)
+  // ============================
+  const clerk=N('persona_user','AP Finance Clerk',1000,230,{
+    notes:'Accounts Payable — authorized to initiate wire transfers. The actual victim of the deception.',
+    fraudExposure:'high', seSusceptibility:'High (Susceptible)', awarenessLevel:'Basic (General Training)', mfa:true});
+  const ceo=N('persona_exec','CEO (Impersonated)',1000,490,{
+    notes:'Identity spoofed in the lure — never actually involved. High-value whaling target.',
+    vip:true, fraudExposure:'critical', seSusceptibility:'Medium (Average)', awarenessLevel:'Intermediate (Annual Training)', mfa:true});
+  const erp=N('store','ERP / Wire Transfer Portal',1280,230,{
+    stride:{T:true,I:true,R:true},pii:true,
+    notes:'Payment initiation + approval workflow. Single-approval for "trusted" payees.'});
+  const bank=N('external','Beneficiary Bank (Mule Account)',1280,490,{
+    notes:'Attacker-controlled mule account — funds cashed out & layered within minutes.',internetExposed:true});
+
+  // ============================
+  // DEFENSE — bottom-center
+  // ============================
+  const siem=N('siem','Email Security / UEBA',460,580,{
+    notes:'DMARC/DKIM/SPF analytics + impossible-travel & anomalous-payment alerts.'});
+  const soc=N('persona_bt','SOC Analyst',720,580,{
+    notes:'Monitors mail-auth failures and flags spoofed-CEO patterns for review.'});
+
+  // ============================
+  // BOUNDARIES
+  // ============================
+  const atkBnd={id:uid('b'),type:'redteam',x:70,y:110,w:230,h:520,label:'BEC Threat Actor',
+    d3fend:[],attack:[{id:'T1656',name:'Impersonation'},{id:'T1583',name:'Acquire Infrastructure'}],
+    notes:'Adversary-owned. No implant ever touches the corporate estate.',pii:false};
+  const emailBnd={id:uid('b'),type:'trust',x:380,y:270,w:520,h:200,label:'Corporate Email (M365)',
+    d3fend:[{id:'D3-MA',name:'Message Analysis'},{id:'D3-MFA',name:'Multi-factor Authentication'}],
+    attack:[],notes:'Cloud email tenant — perimeter for inbound lures',pii:false};
+  const finBnd={id:uid('b'),type:'trust',x:920,y:150,w:520,h:430,label:'Finance Department',
+    d3fend:[{id:'D3-MFA',name:'Multi-factor Authentication'},{id:'D3-UBA',name:'User Behavior Analysis'}],
+    attack:[],notes:'People + payment systems with financial authority',pii:false};
+  state.boundaries.push(atkBnd,emailBnd,finBnd);
+
+  // ============================
+  // LEGITIMATE FLOWS (blue)
+  // ============================
+  Eadd(ceo,clerk,'Normal approval channel',false,true);
+  Eadd(clerk,erp,'Initiate / approve payments');
+  Eadd(m365,clerk,'Delivers mail');
+  Eadd(seg,m365,'Filtered inbound mail');
+  Eadd(siem,seg,'Mail-auth telemetry (SPF/DKIM/DMARC)');
+  Eadd(soc,siem,'Monitors & triages alerts');
+
+  // ============================
+  // ATTACK CHAIN — BEC / CEO fraud
+  // ============================
+  const a1=Eadd(attacker,phishkit,'OSINT → craft urgent CEO lure',true);
+  a1.attack=[{id:'T1589',name:'Gather Victim Identity Information'},{id:'T1591',name:'Gather Victim Org Information'}];
+  a1.notes='Maps org chart, finds AP clerk + CEO travel schedule on LinkedIn / OOO replies.';
+
+  const a2=Eadd(phishkit,lookalike,'Register & weaponize lookalike domain',true);
+  a2.attack=[{id:'T1583.001',name:'Acquire Infrastructure: Domains'}];
+
+  const a3=Eadd(lookalike,seg,'Spoofed "CEO" email — urgent confidential wire',true);
+  a3.attack=[{id:'T1566.002',name:'Spearphishing Link'},{id:'T1656',name:'Impersonation'}];
+  a3.notes='Display-name = CEO, reply-to = attacker. p=quarantine lets it through to junk → clerk retrieves it.';
+
+  const a4=Eadd(m365,clerk,'"Please process this payment today, keep it confidential"',true);
+  a4.attack=[{id:'T1566',name:'Phishing'},{id:'T1534',name:'Internal Spearphishing'}];
+  a4.notes='Urgency + authority + secrecy pressure — classic social-engineering triad.';
+
+  const a5=Eadd(clerk,erp,'Initiates fraudulent wire transfer',true);
+  a5.attack=[{id:'T1657',name:'Financial Theft'}];
+  a5.notes='Single-approval path for "trusted" payee — no out-of-band call-back performed.';
+
+  const a6=Eadd(erp,bank,'Funds wired to mule account',true);
+  a6.attack=[{id:'T1657',name:'Financial Theft'}];
+
+  // ============================
+  // CONTROLS / DEFENSES
+  // ============================
+  seg.props.controls=[{type:'hardening',label:'DMARC (p=quarantine — not enforced)'}];
+  seg.props.d3fend=[{id:'D3-MA',name:'Message Analysis'},{id:'D3-DA',name:'Domain Analysis'}];
+  m365.props.d3fend=[{id:'D3-MFA',name:'Multi-factor Authentication'}];
+  siem.props.d3fend=[{id:'D3-UBA',name:'User Behavior Analysis'},{id:'D3-AL',name:'Account Locking'}];
+
+  applyPiiZones(); select(null); render(); fitView(); pushHistory(); schedSave(); toast('Phishing & CEO Fraud (BEC) loaded');
 }
 function addNodeSilent(type,x,y){const c=COMPONENTS[type];const dd=nodeDefaults(type);const n={id:uid('n'),type,label:c.label,x:snap(x),y:snap(y),free:false,props:{stride:{},pasta:'',attack:dd.attack,d3fend:dd.d3fend,pii:type==='store',notes:''}};state.nodes.push(n);return n;}
 function Eadd(a,b,label,off,bidir,tun){const e={id:uid('e'),from:a.id,to:b.id,label:label||'',offensive:!!off,bidirectional:!!bidir,tunnel:!!tun,props:{stride:{}},attack:[],notes:''};state.edges.push(e);return e;}

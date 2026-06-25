@@ -41,7 +41,7 @@ python -m http.server 8765
 # then navigate to http://localhost:8765
 ```
 
-The app loads an **AD Attack Chain** sample by default. Click **Sample** in the toolbar to explore all 6 built-in scenarios.
+The app loads an **AD Attack Chain** sample by default. Click **Sample** in the toolbar to explore all 7 built-in scenarios.
 
 ---
 
@@ -66,6 +66,17 @@ The app loads an **AD Attack Chain** sample by default. Click **Sample** in the 
 
 > Blue tools attach as **shields on assets** (force-ring + D3FEND coverage), not floating boxes.
 
+### Personas & Human Actors
+
+Model the **people** in your threat story — not just infrastructure. Persona nodes render as stick figures (not boxes) and carry human-centric properties instead of STRIDE/MITRE assessments:
+
+- **Actor types** — Employee, IT Admin, Developer, Executive, Vendor / Contractor, plus security roles (Red Teamer, Blue Teamer) and a generic Threat Actor
+- **Attacker profile** *(Threat Actor & Red Teamer only)* — alias/handle, motto/quote, **Intent** (4 CIA-impact dimensions: 🕵️ Espionage · 💥 Destructive · ⚡ Disruptive · 💰 Cyber-Crime), **Capability** level (Script Kiddie → Nation-State), motivation, sophistication, free-text **Needs** (goals) and **Obstacles** (where defenders can intervene)
+- **Human risk profile** *(non-attacker personas)* — 🎣 **Social Engineering Susceptibility**, 🧠 **Security Awareness Level**, and 💸 **Fraud Exposure** (Critical → Minimal, e.g. BEC / CEO-fraud payment authority)
+- **⭐ VIP / High-Value Target** flag for Executives and IT Admins — surfaces whaling / BEC priority targets, shown with a gold star badge on the node
+- **🔑 MFA** toggle on auth-capable personas — auto-syncs a D3FEND `D3-MFA` mapping
+- **Reworked context menu** — persona right-click menus adapt per type: intent quick-toggles for attackers; MFA, VIP, and fraud-exposure cycling for human personas; free-movement toggle for all
+
 ### Canvas & Visualization
 
 - **Animated tunnel edges** — Red glow for offensive pivots, blue glow for defensive VPN/encrypted channels
@@ -73,7 +84,7 @@ The app loads an **AD Attack Chain** sample by default. Click **Sample** in the 
 - **Freehand Trust Boundary** — Click vertices on the canvas to draw any polygon; press Esc to finalize. Rendered with smooth Catmull-Rom curves, classical threat-model style
 - **Rectangular boundaries** — Trust (blue), Privacy/PII (green), Cloud (gradient), Network (dashed), Red Team, Grey Zone, K8s Namespace, NetworkPolicy
 - **Semantic Auto-arrange** — One click organises nodes into 10 semantic zones: External · Network/DMZ · Corporate · Kubernetes · Cloud · IAM · Blue Team · Red Team · Grey Zone · Pivot/Tunneling
-- **Semantic context menus** — Right-click items adapt to the component type: PII/classification for data stores, STRIDE flags per process type, privilege flag for K8s pods, OpSec for red team, internet exposure for any node
+- **Semantic context menus** — Right-click items adapt to the component type: PII/classification for data stores, STRIDE flags per process type, privilege flag for K8s pods, OpSec for red team, internet exposure for assets, and human-actor actions (intent, MFA, VIP, fraud exposure) for personas
 - **Clickable MITRE IDs** — Every ATT&CK and D3FEND chip opens the official MITRE technique page in a new tab
 - **Zoom & pan** — Scroll to zoom, drag background to pan
 
@@ -89,6 +100,9 @@ Each node carries up to four corner badges so you can read the threat posture at
 | ⚡ Ease score | Bottom-right | Ease of Attack score (0–100, color-coded) |
 | % Bust ring | Bottom-right | **Red team only** — detection bust likelihood |
 | Dashed ring | Outer ring | Red team detection risk color (green → red) |
+| 🔑 Key | Bottom-center | **MFA** enabled on an auth-capable node |
+| ⭐ Star | Top-right | **Persona only** — VIP / High-Value Target |
+| 💸 Cash | Bottom-left | **Persona only** — Fraud Exposure (color-coded by severity) |
 
 ### Red Team OpSec & Detection
 
@@ -139,7 +153,15 @@ Flag any asset as reachable from the public internet:
 - **🌐 Globe badge** appears on the node at 12 o'clock position (blue, distinct from all other badges)
 - **Inspector toggle** — `🌐 Exposed to Internet` switch on every node
 - **Context menu** — `Mark as internet-exposed` / `Remove internet exposure` for all non-red-team, non-blue-team nodes
-- All 6 built-in scenarios pre-annotate the correct nodes (firewalls, VPN gateways, email gateways, reverse proxies, phishing infra, cloud APIs, CI/CD platforms, ingress controllers…)
+- The built-in scenarios pre-annotate the correct nodes (firewalls, VPN gateways, email gateways, reverse proxies, phishing infra, cloud APIs, CI/CD platforms, ingress controllers…)
+
+### Multi-Factor Authentication (MFA)
+
+Flag MFA on any auth-capable asset or human persona:
+
+- **🔑 Key badge** at the node's 6 o'clock position (emerald, non-overlapping with other badges)
+- **Inspector toggle** and **context-menu** action on supported types (external, API, cloud, IAM, web app, AD, SIEM, firewall, and most personas)
+- Enabling MFA **auto-maps the D3FEND `D3-MFA` countermeasure** and **lowers the Ease of Attack score**; a missing MFA on an auth-capable node raises it
 
 ### Analysis & Reporting
 
@@ -166,8 +188,9 @@ Flag any asset as reachable from the public internet:
 | **Cloud Identity Breach (Azure)** | Consent phishing → OAuth token → Graph API → Key Vault | Entra ID takeover, MFA bypass, Managed Identity abuse |
 | **Supply Chain Attack (CI/CD)** | Malicious NPM dep → Runner RCE → Backdoored image → Prod | IRSA credential theft, ECR poisoning, ArgoCD deploy |
 | **Ransomware (Double Extortion)** | RDP brute-force → Cobalt Strike → DCSync → Exfil → GPO deploy | BYOVD EDR kill, rclone exfil, VSS/Veeam deletion |
+| **Phishing & CEO Fraud (BEC)** | OSINT → lookalike domain → spoofed "CEO" email → AP clerk → fraudulent wire → mule account | Impersonation (T1656), Financial Theft (T1657), DMARC/SPF bypass — *malware-free, human-centric* |
 
-All scenarios are pre-annotated with internet-exposed assets, STRIDE flags, ATT&CK/D3FEND techniques, PII zones, and security controls.
+All scenarios are pre-annotated with internet-exposed assets, STRIDE flags, ATT&CK/D3FEND techniques, PII zones, and security controls. The **CEO Fraud** scenario showcases the persona system — human actors with fraud exposure, social-engineering susceptibility, awareness levels, and a VIP-flagged executive.
 
 ---
 
@@ -209,7 +232,8 @@ index.html (single file)
     ├── Auto-arrange              — 10 semantic zone layout
     ├── SVG export                — Canvas clone + node annotations + analysis panel + zoom script
     ├── Interaction               — Drag, select, arm tools, context menus, continuous flow drawing
-    ├── Sample library            — 6 pre-built scenarios with spatial layout and internet exposure flags
+    ├── Persona system            — Human-actor nodes (stick figures), intent/capability, fraud exposure, VIP, MFA
+    ├── Sample library            — 7 pre-built scenarios with spatial layout and internet exposure flags
     └── Help system               — Full-screen tabbed help (Tutorial / Metamodels / Workflow / Shortcuts / About)
 ```
 
@@ -228,6 +252,7 @@ Most threat modeling tools make you choose: either you model the attacker *or* y
 - Ease of Attack scores give defenders a prioritized target list
 - Data classification surfaces which stores are highest-value targets
 - Internet exposure flags make the attack surface boundary explicit
+- Personas put the **human attack surface** on the canvas — social engineering, fraud exposure, and awareness alongside the technical kill chain
 - Sample kill chains let you start from realistic scenarios and adapt
 
 ---
@@ -249,5 +274,5 @@ MIT
 
 <p align="center">
   <b>PurpleSkjaldborg</b> — Build your digital shield wall.<br>
-  <sub>Purple-Team Threat Modeling &middot; STRIDE &middot; PASTA &middot; ATT&CK &middot; D3FEND &middot; OpSec &middot; Ease of Attack</sub>
+  <sub>Purple-Team Threat Modeling &middot; STRIDE &middot; PASTA &middot; ATT&CK &middot; D3FEND &middot; Personas &middot; OpSec &middot; Ease of Attack</sub>
 </p>
