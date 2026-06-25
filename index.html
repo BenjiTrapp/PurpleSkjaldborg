@@ -344,6 +344,7 @@ svg#canvas.panning{cursor:grabbing}
 /* keyframes for force field */
 @keyframes ffpulse{0%,100%{opacity:.55}50%{opacity:.9}}
 @keyframes dashmove{to{stroke-dashoffset:-24}}
+@keyframes pulseGlow{0%,100%{opacity:.55}50%{opacity:1}}
 @keyframes flowmove{to{stroke-dashoffset:-16}}
 @keyframes tunnelflow{to{stroke-dashoffset:-40}}
 @keyframes tunnelpulse{0%,100%{opacity:.45}50%{opacity:.75}}
@@ -1724,6 +1725,7 @@ function renderNodes(){
     grp.innerHTML=`
       <circle class="hit" r="${R+22}"/>
       ${isPersona?`
+        ${n.props.impersonated?`<ellipse rx="${R*0.62}" ry="${R*1.04}" fill="#ef444422" stroke="#ef4444" stroke-width="2.2" filter="url(#glow)" style="animation:pulseGlow 1.8s ease-in-out infinite"/>`:``}
         ${(rt||bt)?`<ellipse rx="${R*0.55}" ry="${R*0.97}" fill="none" stroke="${accent}" stroke-width="1.2" opacity=".45" stroke-dasharray="3 5" style="animation:dashmove ${rt?3:4}s linear infinite"/>`:``}
         <ellipse rx="${R*0.55}" ry="${R*0.97}" fill="none" stroke="${sel?c.color:'transparent'}" stroke-width="${sel?2.2:0}" filter="${sel?'url(#glow)':'none'}"/>
         <circle cx="0" cy="${hY}" r="${hR}" fill="var(--bg-1)" stroke="${c.color}" stroke-width="${sw}"/>
@@ -2234,7 +2236,9 @@ function inspectorNode(n){
         ${FRAUD_LEVELS.map(l=>`<option value="${l.k}" ${(n.props.fraudExposure||'')==l.k?'selected':''}>${l.label}</option>`).join('')}
       </select></div>
     ${HVT_PERSONAS.has(n.type)?`<label class="switch ${n.props.vip?'on':''}" id="f-vip" style="--offense:#eab308;margin-top:10px">
-      <span>⭐ VIP / High-Value Target <small style="color:var(--txt-2)">(priority for attackers — whaling, BEC)</small></span><span class="tg"></span></label>`:''}`
+      <span>⭐ VIP / High-Value Target <small style="color:var(--txt-2)">(priority for attackers — whaling, BEC)</small></span><span class="tg"></span></label>`:''}
+    <label class="switch ${n.props.impersonated?'on':''}" id="f-impersonated" style="--offense:#ef4444;margin-top:6px">
+      <span>🎭 Impersonated <small style="color:var(--txt-2)">(identity spoofed by an attacker)</small></span><span class="tg"></span></label>`
     :`
     <div class="field" style="margin-top:10px"><label>🎯 Motivation</label>
       <select id="f-motivation">
@@ -2536,7 +2540,8 @@ function wireInspector(){
   if($('f-se-susceptibility'))$('f-se-susceptibility').onchange=e=>{const n=nodeAt(sel.id);n.props.seSusceptibility=e.target.value;schedSave();};
   if($('f-awareness'))$('f-awareness').onchange=e=>{const n=nodeAt(sel.id);n.props.awarenessLevel=e.target.value;schedSave();};
   if($('f-fraud'))$('f-fraud').onchange=e=>{const n=nodeAt(sel.id);n.props.fraudExposure=e.target.value;schedSave();};
-  if($('f-vip'))$('f-vip').onclick=()=>{const n=nodeAt(sel.id);n.props.vip=!n.props.vip;schedSave();renderInspector();};
+  if($('f-vip'))$('f-vip').onclick=()=>{const n=nodeAt(sel.id);n.props.vip=!n.props.vip;render();schedSave();renderInspector();};
+  if($('f-impersonated'))$('f-impersonated').onclick=()=>{const n=nodeAt(sel.id);n.props.impersonated=!n.props.impersonated;render();schedSave();renderInspector();toast(n.props.impersonated?`${n.label} — marked as impersonated 🎭`:`Impersonation flag cleared`);};
   if($('f-alias'))$('f-alias').oninput=e=>{const n=nodeAt(sel.id);n.props.alias=e.target.value;schedSave();};
   if($('f-motto'))$('f-motto').oninput=e=>{const n=nodeAt(sel.id);n.props.motto=e.target.value;schedSave();};
   if($('f-capability'))$('f-capability').onchange=e=>{const n=nodeAt(sel.id);n.props.capability=e.target.value;schedSave();};
@@ -3198,6 +3203,9 @@ canvas.addEventListener('contextmenu',e=>{
           items.push({icon:n.props.vip?'☆':'⭐', label:n.props.vip?'Clear VIP / High-Value Target':'Mark as VIP / High-Value Target', action:'toggle_vip'});
           ctxHandlers.toggle_vip=()=>{ pushHistory(); n.props.vip=!n.props.vip; render(); schedSave(); toast(n.props.vip?`${n.label} — VIP / High-Value Target ⭐`:`VIP flag cleared`); };
         }
+        // Impersonated — identity spoofed by an attacker
+        items.push({icon:'🎭', label:n.props.impersonated?'Clear impersonated flag':'Mark as impersonated', action:'toggle_impersonated'});
+        ctxHandlers.toggle_impersonated=()=>{ pushHistory(); n.props.impersonated=!n.props.impersonated; render(); schedSave(); toast(n.props.impersonated?`${n.label} — marked as impersonated 🎭`:`Impersonation flag cleared`); };
         // Fraud exposure — cycle through scale (incl. clearing)
         const curFi=FRAUD_LEVELS.findIndex(l=>l.k===n.props.fraudExposure);
         const curFl=curFi>=0?FRAUD_LEVELS[curFi]:null;
