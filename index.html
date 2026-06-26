@@ -386,6 +386,132 @@ svg#canvas.panning{cursor:grabbing}
 .help-body table{width:100%;border-collapse:collapse;font-size:11.5px;margin:10px 0 16px}
 .help-body th,.help-body td{border:1px solid var(--border);padding:7px 10px;text-align:left}
 .help-body th{background:var(--bg-3);color:var(--txt-1);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ============================================================
+   MOBILE RESPONSIVE — sidebar drawer + inspector sheet + menus
+   ============================================================ */
+#mobile-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  z-index:498;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+}
+#mobile-overlay.show{display:block}
+
+/* Palette burger — hidden on desktop, left slot on mobile */
+#btn-menu{
+  display:none;background:var(--bg-3);border:1px solid var(--border-hi);
+  color:var(--txt-1);padding:0 12px;border-radius:7px;font-size:20px;
+  line-height:1;align-items:center;justify-content:center;height:36px;
+  flex:0 0 auto;
+}
+#btn-menu:hover{background:var(--bg-4);color:var(--txt-0)}
+
+/* Actions burger — hidden on desktop, right slot on mobile */
+#btn-actions-menu{
+  display:none;background:var(--bg-3);border:1px solid var(--border-hi);
+  color:var(--txt-1);padding:0 11px;border-radius:7px;font-size:22px;
+  line-height:1;align-items:center;justify-content:center;height:36px;
+  flex:0 0 auto;letter-spacing:-1px;
+}
+#btn-actions-menu:hover{background:var(--bg-4);color:var(--txt-0)}
+
+/* Actions dropdown panel */
+#actions-menu{
+  display:none;position:fixed;top:58px;right:8px;
+  background:var(--bg-3);border:1px solid var(--border-hi);
+  border-radius:12px;padding:6px 0;
+  min-width:200px;z-index:600;
+  box-shadow:0 16px 48px -8px rgba(0,0,0,.7);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+#actions-menu.show{display:block}
+.am-item{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px;font-size:13px;font-family:var(--mono);
+  color:var(--txt-0);cursor:pointer;transition:background .1s;
+  white-space:nowrap;
+}
+.am-item:hover{background:var(--accent-lo);color:#fff}
+.am-item.disabled{opacity:.35;pointer-events:none}
+.am-item.primary{color:var(--accent-hi)}
+.am-sep{height:1px;background:var(--border);margin:4px 10px}
+
+/* Sidebar close button */
+.sidebar-close{
+  display:none;background:none;border:none;color:var(--txt-2);
+  font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;
+  border-radius:6px;transition:color .1s;
+}
+.sidebar-close:hover{color:var(--txt-0)}
+
+/* Inspector handle */
+.insp-handle{
+  display:none;justify-content:center;padding:10px 0 5px;
+  cursor:pointer;flex:0 0 auto;touch-action:none;
+}
+.insp-handle-bar{width:44px;height:4px;border-radius:2px;background:var(--border-hi)}
+
+@media(max-width:767px){
+  /* Layout */
+  #app{grid-template-columns:1fr}
+  /* Topbar: left-burger | title (flex:1) | actions-burger */
+  header.topbar{
+    height:52px;padding:0 10px;
+    display:flex;align-items:center;gap:8px;
+    justify-content:flex-start;
+  }
+  #btn-menu{display:flex}
+  .topbar .ttl{flex:1;min-width:0}
+  .topbar .ttl h2{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar .ttl p{display:none}
+  .topbar .actions{margin-left:auto;display:flex;gap:6px}
+  .topbar .actions .tbtn{display:none}
+  #btn-actions-menu{display:flex}
+  /* Sidebar: fixed left drawer */
+  #sidebar{
+    position:fixed;left:-100%;top:0;bottom:0;z-index:499;
+    width:280px;max-width:90vw;
+    transition:left .25s cubic-bezier(.4,0,.2,1);
+  }
+  #sidebar.mob-open{left:0;box-shadow:6px 0 40px -6px rgba(0,0,0,.85)}
+  .brand{flex-direction:row;align-items:center;padding:12px 14px;justify-content:space-between}
+  .brand .logo{width:36px;height:36px}
+  .sidebar-close{display:block}
+  /* Palette items: bigger touch targets */
+  .palette-item{padding:11px 10px;font-size:13px}
+  .palette-item .pi-icon{width:28px;height:28px}
+  /* Stage: full width */
+  #stage{width:100%}
+  /* Inspector: bottom sheet */
+  #insp-resizer{display:none}
+  #inspector{
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    width:100%;height:70vh;max-height:88dvh;
+    border-left:none;border-top:1px solid var(--border-hi);
+    border-radius:16px 16px 0 0;
+    transform:translateY(105%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    z-index:300;
+  }
+  #inspector.mob-open{transform:translateY(0)}
+  .insp-handle{display:flex}
+  /* Zoom controls: bigger tap targets */
+  .zoom-controls{right:10px;bottom:10px}
+  .zoom-controls button{width:44px;height:44px;font-size:20px;border-radius:10px}
+  /* Toast: above inspector */
+  #toast{bottom:72px}
+  /* Context menu: bigger targets */
+  #ctx-menu .ctx-item{padding:12px 16px;font-size:13px}
+  /* Modal: full-screen */
+  .modal{width:100vw;max-height:100dvh;border-radius:0}
+  /* Help overlay */
+  .help-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0}
+  .help-tabs button{white-space:nowrap;font-size:11px;padding:11px 14px}
+  .help-body{padding:20px 14px}
+  .help-body .two-col{grid-template-columns:1fr}
+  .legend-grid{grid-template-columns:1fr}
+  /* Switch: larger tap area */
+  .switch{min-height:44px}
+}
 </style>
 </head>
 <body>
@@ -398,6 +524,7 @@ svg#canvas.panning{cursor:grabbing}
         <h1>Skjald<span>borg</span></h1>
         <div class="tag">Purple-Team Threat Modeling</div>
       </div>
+      <button class="sidebar-close" id="btn-sidebar-close" title="Close">×</button>
     </div>
     <div class="side-scroll" id="palette"><!-- built by JS --></div>
   </aside>
@@ -405,6 +532,7 @@ svg#canvas.panning{cursor:grabbing}
   <!-- ===================== MAIN ===================== -->
   <div id="main">
     <header class="topbar">
+      <button id="btn-menu" title="Component palette">☰</button>
       <div class="ttl">
         <h2 id="model-title">Threat Model</h2>
         <p>Drag a component onto the canvas. Wire <b>Data Flows</b>, raise <b>Boundaries</b>, map threats to <b>ATT&CK</b> &amp; <b>D3FEND</b>.</p>
@@ -418,11 +546,12 @@ svg#canvas.panning{cursor:grabbing}
         <button class="tbtn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
         <button class="tbtn" id="btn-redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)" disabled>↪ Redo</button>
         <button class="tbtn" id="btn-new" title="New empty project">📋 New</button>
-        <button class="tbtn ghost" id="btn-import" title="Import JSON">⬇</button>
+        <button class="tbtn" id="btn-import" title="Import JSON">⬇ Import</button>
         <button class="tbtn" id="btn-export" title="Export JSON">⬆ Save</button>
         <button class="tbtn" id="btn-svg" title="Export as SVG image">🖼 SVG</button>
         <button class="tbtn primary" id="btn-sample">✨ Sample</button>
         <button class="tbtn" id="btn-help" title="Help & tutorial (?)">? Help</button>
+        <button id="btn-actions-menu" title="Actions">•••</button>
       </div>
     </header>
 
@@ -441,6 +570,7 @@ svg#canvas.panning{cursor:grabbing}
 
       <!-- INSPECTOR -->
       <aside id="inspector">
+        <div class="insp-handle" id="insp-handle"><div class="insp-handle-bar"></div></div>
         <div class="insp-tabs">
           <button data-itab="props" class="active">Properties</button>
           <button data-itab="analysis">Analysis</button>
@@ -475,8 +605,27 @@ svg#canvas.panning{cursor:grabbing}
   </div>
   <div class="help-body" id="help-body"></div>
 </div>
+<div id="mobile-overlay"></div>
 <div id="toast"></div>
 <div id="ctx-menu"></div>
+<div id="actions-menu">
+  <div class="am-item" data-trigger="btn-stride">🛡️ STRIDE matrix</div>
+  <div class="am-item" data-trigger="btn-pasta">🍝 PASTA stages</div>
+  <div class="am-item" data-trigger="btn-legend">＃ Legend</div>
+  <div class="am-item" data-trigger="btn-report">📄 Threat report</div>
+  <div class="am-sep"></div>
+  <div class="am-item" data-trigger="btn-arrange">⊞ Auto-arrange</div>
+  <div class="am-item" id="am-undo" data-trigger="btn-undo">↩ Undo</div>
+  <div class="am-item" id="am-redo" data-trigger="btn-redo">↪ Redo</div>
+  <div class="am-sep"></div>
+  <div class="am-item" data-trigger="btn-new">📋 New model</div>
+  <div class="am-item" data-trigger="btn-import">⬇ Import JSON</div>
+  <div class="am-item" data-trigger="btn-export">⬆ Save JSON</div>
+  <div class="am-item" data-trigger="btn-svg">🖼 Export SVG</div>
+  <div class="am-item" data-trigger="btn-sample">✨ Load sample</div>
+  <div class="am-sep"></div>
+  <div class="am-item" data-trigger="btn-help">? Help &amp; tutorial</div>
+</div>
 <input type="file" id="file-input" accept=".json,.skjaldborg" style="display:none">
 
 <script>
@@ -2153,6 +2302,7 @@ function expandK8s(node){
    ===================================================================== */
 function select(type,id){
   selected=(type&&id)?{type,id}:null; renderNodes(); renderEdges(); renderBoundaries(); renderInspector();
+  if(typeof mobSelectHook==='function') mobSelectHook(!!selected);
   // contextual modeling hints
   if(!type) return;
   if(type==='node'){
@@ -2952,8 +3102,19 @@ function renderAnalysis(){
 let drag=null; // {mode, ...}
 let moveGrab=null; // click-to-grab, click-to-place for boundaries & nodes
 let freePath=null; // {points:[[x,y],...]} — active freehand drawing session
+const activePointers=new Map(); let pinchState=null; // multi-touch pinch-zoom
 
 canvas.addEventListener('pointerdown',e=>{
+  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(activePointers.size===2){
+    const [p1,p2]=[...activePointers.values()];
+    const r=canvas.getBoundingClientRect();
+    pinchState={dist:Math.hypot(p2.x-p1.x,p2.y-p1.y),
+      vk:view.k,vx:view.x,vy:view.y,
+      cx:(p1.x+p2.x)/2-r.left,cy:(p1.y+p2.y)/2-r.top};
+    drag=null; canvas.classList.remove('panning');
+    canvas.setPointerCapture(e.pointerId); return;
+  }
   const w=screenToWorld(e.clientX,e.clientY);
   const nodeEl=e.target.closest('.node');
   const edgeEl=e.target.closest('.flow');
@@ -3022,6 +3183,15 @@ canvas.addEventListener('pointerdown',e=>{
 });
 
 canvas.addEventListener('pointermove',e=>{
+  if(activePointers.has(e.pointerId)) activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinchState&&activePointers.size>=2){
+    const [p1,p2]=[...activePointers.values()];
+    const dist=Math.hypot(p2.x-p1.x,p2.y-p1.y);
+    const k=Math.min(2.6,Math.max(.25,pinchState.vk*(dist/pinchState.dist)));
+    view.x=pinchState.cx-(pinchState.cx-pinchState.vx)*(k/pinchState.vk);
+    view.y=pinchState.cy-(pinchState.cy-pinchState.vy)*(k/pinchState.vk);
+    view.k=k; applyView(); return;
+  }
   const w=screenToWorld(e.clientX,e.clientY);
   // live temp line while connecting
   if(armed&&connectFrom&&(COMPONENTS[armed].kind==='edge'||COMPONENTS[armed].kind==='attack'||COMPONENTS[armed].kind==='tunnel_off'||COMPONENTS[armed].kind==='tunnel_def')){
@@ -3066,6 +3236,9 @@ canvas.addEventListener('pointermove',e=>{
 });
 
 canvas.addEventListener('pointerup',e=>{
+  activePointers.delete(e.pointerId);
+  if(activePointers.size<2){pinchState=null;}
+  if(pinchState){try{canvas.releasePointerCapture(e.pointerId);}catch(_){} return;}
   if(drag){
     // If boundary was clicked without dragging → enter move-grab mode (click-to-place)
     if(drag.mode==='boundary'&&!drag.started&&!drag.b.points){
@@ -3081,6 +3254,10 @@ canvas.addEventListener('pointerup',e=>{
     canvas.classList.remove('panning'); try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
   }
   drag=null;
+});
+canvas.addEventListener('pointercancel',e=>{
+  activePointers.delete(e.pointerId); if(activePointers.size<2) pinchState=null;
+  drag=null; canvas.classList.remove('panning');
 });
 
 // double-click a flow to toggle offensive; double-click a Kubernetes node to expand it; finalize freehand boundary
@@ -5144,6 +5321,77 @@ document.addEventListener('keydown',e=>{
     if(ov.classList.contains('show'))closeHelp(); else openHelp();
   }
 });
+
+/* =====================================================================
+   MOBILE — sidebar drawer + actions menu + inspector bottom sheet
+   ===================================================================== */
+(function(){
+  const isMob=()=>window.innerWidth<768;
+  const sidebar=document.getElementById('sidebar');
+  const overlay=document.getElementById('mobile-overlay');
+  const insp=document.getElementById('inspector');
+  const handle=document.getElementById('insp-handle');
+  const actionsMenu=document.getElementById('actions-menu');
+
+  function openSidebar(){sidebar.classList.add('mob-open');overlay.classList.add('show');}
+  function closeSidebar(){sidebar.classList.remove('mob-open');overlay.classList.remove('show');}
+  function openInspSheet(){if(isMob())insp.classList.add('mob-open');}
+  function closeInspSheet(){insp.classList.remove('mob-open');}
+  function closeActionsMenu(){actionsMenu.classList.remove('show');}
+  function toggleActionsMenu(e){e.stopPropagation();actionsMenu.classList.toggle('show');}
+
+  // Palette burger (left)
+  document.getElementById('btn-menu').addEventListener('click',openSidebar);
+  // Sidebar × close button
+  document.getElementById('btn-sidebar-close').addEventListener('click',closeSidebar);
+  // Actions burger (right)
+  document.getElementById('btn-actions-menu').addEventListener('click',toggleActionsMenu);
+
+  // Overlay: close sidebar and actions menu
+  overlay.addEventListener('click',()=>{closeSidebar();closeActionsMenu();});
+  // Click anywhere else closes actions menu
+  document.addEventListener('click',closeActionsMenu);
+
+  // Actions menu items: proxy-click the hidden toolbar buttons
+  actionsMenu.addEventListener('click',e=>{
+    e.stopPropagation();
+    const item=e.target.closest('.am-item');
+    if(!item)return;
+    const target=document.getElementById(item.dataset.trigger);
+    if(target)target.click();
+    closeActionsMenu();
+  });
+
+  // Sync undo/redo disabled state into actions menu
+  const amUndo=document.getElementById('am-undo');
+  const amRedo=document.getElementById('am-redo');
+  const obs=new MutationObserver(()=>{
+    amUndo.classList.toggle('disabled',document.getElementById('btn-undo').disabled);
+    amRedo.classList.toggle('disabled',document.getElementById('btn-redo').disabled);
+  });
+  obs.observe(document.getElementById('btn-undo'),{attributes:true,attributeFilter:['disabled']});
+  obs.observe(document.getElementById('btn-redo'),{attributes:true,attributeFilter:['disabled']});
+
+  // Close sidebar when palette item tapped on mobile
+  document.getElementById('palette').addEventListener('pointerdown',()=>{if(isMob())closeSidebar();});
+
+  // Handle drag-down to close inspector sheet
+  let hTouchY=null;
+  handle.addEventListener('pointerdown',e=>{hTouchY=e.clientY;e.stopPropagation();});
+  handle.addEventListener('pointermove',e=>{
+    if(hTouchY!==null&&e.clientY-hTouchY>48){closeInspSheet();hTouchY=null;}
+  });
+  handle.addEventListener('pointerup',e=>{
+    if(hTouchY!==null&&e.clientY-hTouchY<10)closeInspSheet();
+    hTouchY=null;
+  });
+
+  // Called from select() — open/close the inspector sheet on mobile
+  window.mobSelectHook=function(hasSelection){
+    if(!isMob())return;
+    if(hasSelection)openInspSheet(); else closeInspSheet();
+  };
+})();
 
 /* =====================================================================
    INSPECTOR RESIZE
