@@ -74,8 +74,9 @@ Model the **people** in your threat story — not just infrastructure. Persona n
 - **Attacker profile** *(Threat Actor & Red Teamer only)* — alias/handle, motto/quote, **Intent** (4 CIA-impact dimensions: 🕵️ Espionage · 💥 Destructive · ⚡ Disruptive · 💰 Cyber-Crime), **Capability** level (Script Kiddie → Nation-State), motivation, sophistication, free-text **Needs** (goals) and **Obstacles** (where defenders can intervene)
 - **Human risk profile** *(non-attacker personas)* — 🎣 **Social Engineering Susceptibility**, 🧠 **Security Awareness Level**, and 💸 **Fraud Exposure** (Critical → Minimal, e.g. BEC / CEO-fraud payment authority)
 - **⭐ VIP / High-Value Target** flag for Executives and IT Admins — surfaces whaling / BEC priority targets, shown with a gold star badge on the node
+- **🎭 Impersonated** flag for non-attacker personas — marks an identity spoofed by an attacker (e.g. the "CEO" in a BEC lure); the persona **glows red** on the canvas
 - **🔑 MFA** toggle on auth-capable personas — auto-syncs a D3FEND `D3-MFA` mapping
-- **Reworked context menu** — persona right-click menus adapt per type: intent quick-toggles for attackers; MFA, VIP, and fraud-exposure cycling for human personas; free-movement toggle for all
+- **Reworked context menu** — persona right-click menus adapt per type: intent quick-toggles for attackers; MFA, VIP, impersonated, and fraud-exposure cycling for human personas; free-movement toggle for all
 
 ### Canvas & Visualization
 
@@ -90,7 +91,7 @@ Model the **people** in your threat story — not just infrastructure. Persona n
 
 ### Node Badges (Canvas indicators)
 
-Each node carries up to four corner badges so you can read the threat posture at a glance without opening the inspector:
+Each node carries corner badges so you can read the threat posture at a glance without opening the inspector:
 
 | Badge | Position | Meaning |
 |-------|----------|---------|
@@ -103,6 +104,7 @@ Each node carries up to four corner badges so you can read the threat posture at
 | 🔑 Key | Bottom-center | **MFA** enabled on an auth-capable node |
 | ⭐ Star | Top-right | **Persona only** — VIP / High-Value Target |
 | 💸 Cash | Bottom-left | **Persona only** — Fraud Exposure (color-coded by severity) |
+| 🎭 Red glow | Whole node | **Persona only** — identity is **impersonated** by an attacker |
 
 ### Red Team OpSec & Detection
 

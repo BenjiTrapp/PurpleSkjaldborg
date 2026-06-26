@@ -843,7 +843,7 @@ const COMPONENTS = {
 
   // ---- offensive / disposable zones ----
   redteam:   {label:'Red Team Infra',sub:'offensive perimeter',icon:'skull',      color:'#ef4444', kind:'boundary', bnd:'redteam', desc:'Red Team Infrastructure perimeter — attacker-owned C2, staging & tooling.'},
-  grey:      {label:'Grey Zone',     sub:'disposable hosts',   icon:'redirector', color:'#94a3b8', kind:'boundary', bnd:'grey', desc:'Grey-zone hosting (VPS, CDN, redirectors, compromised infra) fronting the red team estate.'},
+  grey:      {label:'Grey Zone',     sub:'disposable hosts',   icon:'redirector', color:'#94a3b8', kind:'boundary', bnd:'grey', desc:'Neutral fronting infra (disposable VPS, CDN-fronting, redirectors, compromised hosts) owned by neither side — used for OpSec & obfuscation of the attacker estate.'},
 
   // ---- Attacker Techniques (Living off the Land, Pivoting, Tunneling) ----
   lolbin:    {label:'LOLBins/LOLBas',sub:'living off the land',icon:'lolbin',     color:'#f97316', kind:'node', redteam:true, desc:'Living off the Land Binaries/Scripts — abusing legitimate OS tools (certutil, rundll32, mshta, PowerShell, wmic) to evade detection.'},
@@ -3615,14 +3615,24 @@ function showLegend(){
   const body=`<div class="legend-grid">
     <div class="legend-card"><h4><span class="swatch" style="background:var(--offense)"></span>⚔️ Attack Vector</h4>
       <p>An <b>offensive</b> data flow mapped to <b>MITRE ATT&CK</b>. Renders red with a sword. Draw it like a flow, or double-click any flow to toggle.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:var(--cyan)"></span>⟿ Flows, Tunnels &amp; Encryption</h4>
+      <p><b>Data flow</b> = solid cyan arrow. <b>Tunnel / pivot</b> edges glow (red for offensive pivots, blue for VPN / encrypted channels) — use for SOCKS, WireGuard, C2. <b>Encrypted-in-transit</b> flows pulse with a <b style="color:#22c55e">green glow</b>. Double-click toggles attack↔data; the inspector toggles tunnel &amp; encryption.</p></div>
     <div class="legend-card"><h4><span class="swatch" style="background:var(--trust)"></span>🛡️ Trust Boundary</h4>
       <p>A blue <b>force field</b> (Star-Wars style) backed by <b>MITRE D3FEND</b> countermeasures. Enclose what it defends.</p></div>
     <div class="legend-card"><h4><span class="swatch" style="background:var(--privacy)"></span>🔒 Data Protection</h4>
       <p>Green zone marking <b>PII / privacy-relevant</b> assets needing explicit treatment (GDPR). Nodes inside are auto-flagged 🔒.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:#7dd3fc"></span>☁ More Zones</h4>
+      <p><b>Cloud Boundary</b> (light-blue, D3FEND) for cloud-native estates · <b>Namespace</b> &amp; <b>NetworkPolicy</b> for K8s segmentation · <b>Freehand Boundary</b> — click vertices on the canvas, <b>Esc</b> to finalize a smooth polygon trust zone. Lock 🔒 any boundary so contained nodes move with it.</p></div>
     <div class="legend-card"><h4><span class="swatch" style="background:var(--offense)"></span>☠ Red Team Infra</h4>
-      <p>Attacker-owned nodes in collapsible sub-categories: <b>C2 Frameworks</b> (Cobalt Strike, Brute Ratel, Sliver, Havoc, ArachneC2, AdaptixC2, custom) and <b>Phishing Infra</b> (EvilGinx2, GoPhish, Tangled, PhishingClub). Red ring + sword, pre-mapped to <b>ATT&CK</b>. Host them in a <b>Red Team Infrastructure</b> or <b>Grey Zone</b>.</p></div>
+      <p><b>Attacker-owned</b> nodes in collapsible sub-categories: <b>C2 Frameworks</b> (Cobalt Strike, Brute Ratel, Sliver, Havoc, ArachneC2, AdaptixC2, custom) and <b>Phishing Infra</b> (EvilGinx2, GoPhish, Tangled, PhishingClub). Red ring + sword, pre-mapped to <b>ATT&CK</b>. Operated from a <b>Red Team Infrastructure</b> perimeter, fronted by the <b>Grey Zone</b>.</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:#94a3b8"></span>🌫️ Grey Zone</h4>
+      <p><b>Neutral fronting infrastructure</b> — owned by <i>neither</i> the attacker nor the target. Disposable VPS, CDN-fronting, redirectors and compromised third-party hosts used purely for <b>OpSec &amp; obfuscation</b> to hide the real attacker estate. Short TTL, burned &amp; rotated per op. Carries <b>ATT&amp;CK</b> mapping but sits outside the Red Team perimeter.</p></div>
     <div class="legend-card"><h4><span class="swatch" style="background:var(--trust)"></span>🛡️ Blue Team Defense</h4>
       <p>Arm a defensive tool and <b>click a node to protect it</b> — it gets a cyan force-ring + shield badge and its <b>D3FEND</b> coverage is added to that asset. Click empty canvas instead to drop it as a standalone control. Grouped into collapsible sub-categories (EDR/XDR, NDR/NOC, Network Filtering, Cloud Security, Hardening & Deception).</p></div>
+    <div class="legend-card"><h4><span class="swatch" style="background:#a855f7"></span>👤 Personas &amp; Actors</h4>
+      <p><b>Human actors</b> rendered as stick figures: Employee, IT Admin, Developer, Executive, Vendor, plus Red/Blue Teamer &amp; Threat Actor. Attackers carry <b>intent</b> (CIA-impact) &amp; <b>capability</b>; non-attackers carry <b>social-engineering susceptibility</b>, <b>awareness</b> &amp; <b>fraud exposure</b>. Badges: ⭐ VIP / high-value target, 🔑 MFA, 💸 fraud, 🎭 <b>impersonated</b> (red glow).</p></div>
+    <div class="legend-card"><h4>🏷️ Node Badges &amp; Scoring</h4>
+      <p>Corner badges read posture at a glance: 🌐 <b>internet-exposed</b> (top) · 🔑 <b>MFA</b> (bottom) · count pill = ATT&amp;CK / STRIDE techniques · <b style="color:#f59e0b">⚡ Ease of Attack</b> (0–100, auto-scored from edges, STRIDE, controls, MFA, exposure). Red-team nodes instead show a <b style="color:#ef4444">bust-likelihood %</b> ring = D3FEND coverage × OpSec — how detectable they are.</p></div>
     <div class="legend-card"><h4>⎈ Kubernetes drill-down</h4>
       <p>Double-click a <b>Kubernetes</b> node (or use its inspector button) to expand it into Control Plane, etcd, Nodes, Pods, Services, Ingress, ServiceAccounts, Secrets & Kyverno — wrapped in a <b>Namespace</b> and a <b>NetworkPolicy</b> segmentation boundary.</p></div>
     <div class="legend-card"><h4>🦝 Components</h4>
