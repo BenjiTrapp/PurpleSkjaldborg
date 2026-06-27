@@ -170,7 +170,7 @@ header.topbar{
   pointer-events:none;transition:opacity .3s;max-width:80%;text-align:center;
 }
 #hint b{color:var(--accent-hi)}
-svg#canvas{width:100%;height:100%;display:block;cursor:default;touch-action:none}
+svg#canvas{width:100%;height:100%;display:block;cursor:default;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 svg#canvas.connect-mode{cursor:crosshair}
 svg#canvas.panning{cursor:grabbing}
 
@@ -345,6 +345,7 @@ svg#canvas.panning{cursor:grabbing}
 @keyframes ffpulse{0%,100%{opacity:.55}50%{opacity:.9}}
 @keyframes dashmove{to{stroke-dashoffset:-24}}
 @keyframes pulseGlow{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes lpfill{to{stroke-dashoffset:0}}
 @keyframes flowmove{to{stroke-dashoffset:-16}}
 @keyframes tunnelflow{to{stroke-dashoffset:-40}}
 @keyframes tunnelpulse{0%,100%{opacity:.45}50%{opacity:.75}}
@@ -1780,6 +1781,8 @@ function armTool(tool){
   else if(c.blueteam) showHint(`<b>${c.label}</b>: click a <b>node</b> to attach as shield 🛡️ — adds D3FEND countermeasures. Or click canvas for standalone.`);
   else if(c.redteam) showHint(`<b>${c.label}</b>: place on canvas, then connect with attack edges. ATT&CK techniques are auto-mapped.`);
   else showHint(`<b>${c.label}</b>: click canvas to place. Then connect edges and assign STRIDE threats in the inspector.`);
+  // On mobile, collapse the palette drawer so the canvas is reachable for placement
+  if(window.__mobCloseSidebar)window.__mobCloseSidebar();
 }
 function disarm(){
   armed=null; connectFrom=null; freePath=null;
@@ -2020,16 +2023,19 @@ function renderBoundaries(){
           <g style="color:${col}" transform="scale(.8)">${ICONS[cfg.icon]}</g>
           <text class="bnd-label" x="26" y="13" fill="${col}">${esc(b.label)}</text>
         </g>
-        <g class="bnd-lock" data-lockid="${b.id}" transform="translate(${b.x+b.w-22} ${b.y+b.h-22})">
-          <circle r="10" cx="10" cy="10" fill="rgba(8,8,12,.7)" stroke="${col}" stroke-width=".8" stroke-opacity=".5"/>
-          <text x="10" y="14" text-anchor="middle" style="font-size:11px;fill:${col}" >${b.locked!==false?'🔒':'🔓'}</text>
+        <g class="bnd-lock" data-lockid="${b.id}" transform="translate(${b.x+8} ${b.y+b.h-26})">
+          <circle r="12" cx="12" cy="12" fill="rgba(8,8,12,.7)" stroke="${col}" stroke-width=".8" stroke-opacity=".5"/>
+          <text x="12" y="16" text-anchor="middle" style="font-size:12px;fill:${col}" >${b.locked!==false?'🔒':'🔓'}</text>
         </g>
         ${(()=>{const sc=boundaryScore(b),rk=riskLevel(sc.residual);return b.w>=164?`<g transform="translate(${b.x+b.w-126} ${b.y+7})">
           <rect width="118" height="19" rx="9.5" fill="rgba(8,8,12,.75)" stroke="${col}" stroke-opacity=".35"/>
           <text x="9" y="13.5" style="font:700 9.5px var(--mono);fill:var(--offense)">A ${sc.A}</text>
           <text x="45" y="13.5" style="font:700 9.5px var(--mono);fill:var(--trust)">D ${sc.D}</text>
           <text x="80" y="13.5" style="font:700 9.5px var(--mono);fill:${rk.c}">R ${sc.residual}</text></g>`:''})()}
-        ${sel?`<rect class="bnd-resize" x="${b.x+b.w-9}" y="${b.y+b.h-9}" width="14" height="14" rx="3" fill="${col}" stroke="#000" stroke-width="1"/>`:''}
+        ${sel?`<g>
+          <rect class="bnd-resize" x="${b.x+b.w-24}" y="${b.y+b.h-24}" width="40" height="40" rx="8" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="1.5" stroke-opacity=".7"/>
+          <path class="bnd-resize" d="M ${b.x+b.w-4} ${b.y+b.h-14} L ${b.x+b.w-14} ${b.y+b.h-4} M ${b.x+b.w-3} ${b.y+b.h-8} L ${b.x+b.w-8} ${b.y+b.h-3}" stroke="${col}" stroke-width="2" stroke-linecap="round" pointer-events="none"/>
+        </g>`:''}
       `;
     }
     g.appendChild(grp);
@@ -3103,6 +3109,26 @@ let drag=null; // {mode, ...}
 let moveGrab=null; // click-to-grab, click-to-place for boundaries & nodes
 let freePath=null; // {points:[[x,y],...]} — active freehand drawing session
 const activePointers=new Map(); let pinchState=null; // multi-touch pinch-zoom
+// --- touch long-press → context menu ---
+const LONGPRESS_MS=600;          // hold duration (ms) on touch to open a node's menu
+const LONGPRESS_MOVE_TOL=10;     // movement (world px) that cancels the long-press
+let lpTimer=null, lpFired=false, lpStartW=null, lpRingT0=0;
+function cancelLongPress(){ if(lpTimer){clearTimeout(lpTimer); lpTimer=null;} clearLongPressRing(); }
+function clearLongPressRing(){ const r=document.getElementById('lp-ring'); if(r)r.remove(); }
+function startLongPressRing(wx,wy){
+  clearLongPressRing();
+  const g=document.getElementById('g-temp');
+  const ns='http://www.w3.org/2000/svg';
+  const c=document.createElementNS(ns,'circle');
+  c.id='lp-ring'; c.setAttribute('cx',wx); c.setAttribute('cy',wy); c.setAttribute('r',R+8);
+  c.setAttribute('fill','none'); c.setAttribute('stroke','var(--cyan)'); c.setAttribute('stroke-width','3');
+  c.setAttribute('stroke-linecap','round'); c.setAttribute('opacity','.9');
+  const circ=2*Math.PI*(R+8);
+  c.setAttribute('stroke-dasharray',circ); c.setAttribute('stroke-dashoffset',circ);
+  c.setAttribute('transform',`rotate(-90 ${wx} ${wy})`);
+  c.style.animation=`lpfill ${LONGPRESS_MS}ms linear forwards`;
+  g.appendChild(c);
+}
 
 canvas.addEventListener('pointerdown',e=>{
   activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -3120,6 +3146,21 @@ canvas.addEventListener('pointerdown',e=>{
   const edgeEl=e.target.closest('.flow');
   const bndEl=e.target.closest('.boundary');
   const isResize=e.target.classList.contains('bnd-resize');
+
+  // --- touch long-press → open context menu (no right-click on touch) ---
+  cancelLongPress(); lpFired=false;
+  if(e.pointerType==='touch' && !armed && !moveGrab && (nodeEl||bndEl||edgeEl) && !isResize){
+    lpStartW=w;
+    const tgt=e.target, cx=e.clientX, cy=e.clientY;
+    if(nodeEl){const nn=nodeAt(nodeEl.dataset.id); if(nn)startLongPressRing(nn.x,nn.y);}
+    lpTimer=setTimeout(()=>{
+      lpFired=true; lpTimer=null; clearLongPressRing();
+      drag=null; canvas.classList.remove('panning');
+      try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
+      if(navigator.vibrate)navigator.vibrate(15);
+      openContextMenu(tgt, cx, cy);
+    }, LONGPRESS_MS);
+  }
 
   // --- if we're in move-grab mode, second click places the element ---
   if(moveGrab){
@@ -3174,7 +3215,7 @@ canvas.addEventListener('pointerdown',e=>{
     const bb=b.points?freehandBBox(b):b;
     // standard hold-drag also works
     const inside=b.locked!==false ? nodesInside(b) : [];
-    drag={mode:'boundary',b,dx:w.x-bb.x,dy:w.y-bb.y,lastW:{x:w.x,y:w.y},inside,started:false,startW:{x:w.x,y:w.y}}; canvas.setPointerCapture(e.pointerId); return;
+    drag={mode:'boundary',b,dx:w.x-bb.x,dy:w.y-bb.y,lastW:{x:w.x,y:w.y},inside,started:false,startW:{x:w.x,y:w.y},touch:e.pointerType==='touch'}; canvas.setPointerCapture(e.pointerId); return;
   }
   // --- pan / deselect ---
   select(null);
@@ -3193,6 +3234,8 @@ canvas.addEventListener('pointermove',e=>{
     view.k=k; applyView(); return;
   }
   const w=screenToWorld(e.clientX,e.clientY);
+  // cancel a pending long-press once the finger moves
+  if(lpTimer&&lpStartW&&Math.hypot(w.x-lpStartW.x,w.y-lpStartW.y)>LONGPRESS_MOVE_TOL) cancelLongPress();
   // live temp line while connecting
   if(armed&&connectFrom&&(COMPONENTS[armed].kind==='edge'||COMPONENTS[armed].kind==='attack'||COMPONENTS[armed].kind==='tunnel_off'||COMPONENTS[armed].kind==='tunnel_def')){
     const a=nodeAt(connectFrom); if(a)drawTempLine(a.x,a.y,w.x,w.y);
@@ -3238,10 +3281,15 @@ canvas.addEventListener('pointermove',e=>{
 canvas.addEventListener('pointerup',e=>{
   activePointers.delete(e.pointerId);
   if(activePointers.size<2){pinchState=null;}
+  cancelLongPress();
+  if(lpFired){ // long-press already opened the menu — swallow this release
+    lpFired=false; drag=null; canvas.classList.remove('panning');
+    try{canvas.releasePointerCapture(e.pointerId);}catch(_){} return;
+  }
   if(pinchState){try{canvas.releasePointerCapture(e.pointerId);}catch(_){} return;}
   if(drag){
-    // If boundary was clicked without dragging → enter move-grab mode (click-to-place)
-    if(drag.mode==='boundary'&&!drag.started&&!drag.b.points){
+    // If boundary was clicked without dragging → enter move-grab mode (mouse only; touch just selects)
+    if(drag.mode==='boundary'&&!drag.started&&!drag.b.points&&!drag.touch){
       const w=screenToWorld(e.clientX,e.clientY);
       const bb=drag.b.points?freehandBBox(drag.b):drag.b;
       moveGrab={b:drag.b, dx:w.x-bb.x, dy:w.y-bb.y, inside:drag.inside};
@@ -3257,6 +3305,7 @@ canvas.addEventListener('pointerup',e=>{
 });
 canvas.addEventListener('pointercancel',e=>{
   activePointers.delete(e.pointerId); if(activePointers.size<2) pinchState=null;
+  cancelLongPress(); lpFired=false;
   drag=null; canvas.classList.remove('panning');
 });
 
@@ -3292,8 +3341,9 @@ canvas.addEventListener('click',e=>{
 
 // ------- RIGHT-CLICK CONTEXT MENU -------
 const ctxMenu=document.getElementById('ctx-menu');
+let ctxJustOpened=false; // suppress the synthetic click that follows a touch long-press
 function hideCtx(){ctxMenu.classList.remove('show');}
-document.addEventListener('click',hideCtx);
+document.addEventListener('click',()=>{ if(ctxJustOpened){ctxJustOpened=false;return;} hideCtx(); });
 document.addEventListener('scroll',hideCtx);
 window.addEventListener('blur',hideCtx);
 
@@ -3306,6 +3356,7 @@ function showCtxMenu(x,y,items){
   }).join('');
   ctxMenu.style.left=x+'px'; ctxMenu.style.top=y+'px';
   ctxMenu.classList.add('show');
+  ctxJustOpened=true; setTimeout(()=>{ctxJustOpened=false;},700);
   // ensure on screen
   const rect=ctxMenu.getBoundingClientRect();
   if(rect.right>window.innerWidth) ctxMenu.style.left=(x-rect.width)+'px';
@@ -3322,9 +3373,13 @@ const ctxHandlers={};
 
 canvas.addEventListener('contextmenu',e=>{
   e.preventDefault();
-  const nodeEl=e.target.closest('.node');
-  const bndEl=e.target.closest('.boundary');
-  const edgeEl=e.target.closest('.flow');
+  openContextMenu(e.target, e.clientX, e.clientY);
+});
+
+function openContextMenu(tgt, clientX, clientY){
+  const nodeEl=tgt.closest('.node');
+  const bndEl=tgt.closest('.boundary');
+  const edgeEl=tgt.closest('.flow');
   const items=[];
 
   if(nodeEl){
@@ -3485,8 +3540,8 @@ canvas.addEventListener('contextmenu',e=>{
     ctxHandlers.clear=()=>clearCanvas();
   }
 
-  showCtxMenu(e.clientX,e.clientY,items);
-});
+  showCtxMenu(clientX,clientY,items);
+}
 
 // drag & drop from palette
 canvas.addEventListener('dragover',e=>e.preventDefault());
@@ -3644,6 +3699,9 @@ function showLegend(){
     <div class="an-row"><span>Delete selection</span><b>Del / Backspace</b></div>
     <div class="an-row"><span>Cancel tool</span><b>Esc</b></div>
     <div class="an-row"><span>Pan / Zoom</span><b>Drag bg / Scroll</b></div>
+    <div class="an-row"><span>Context menu (desktop)</span><b>Right-click</b></div>
+    <div class="an-row"><span>Context menu (touch)</span><b>Long-press node</b></div>
+    <div class="an-row"><span>Resize boundary</span><b>Select → drag corner grip</b></div>
   </div>`;
   openModal('＃ Legend & shortcuts',body);
 }
@@ -5382,8 +5440,9 @@ document.addEventListener('keydown',e=>{
   obs.observe(document.getElementById('btn-undo'),{attributes:true,attributeFilter:['disabled']});
   obs.observe(document.getElementById('btn-redo'),{attributes:true,attributeFilter:['disabled']});
 
-  // Close sidebar when palette item tapped on mobile
-  document.getElementById('palette').addEventListener('pointerdown',()=>{if(isMob())closeSidebar();});
+  // Close the drawer only when a component is actually armed — NOT when typing in the
+  // search box or scrolling the component list. armTool() calls this hook.
+  window.__mobCloseSidebar=()=>{if(isMob())closeSidebar();};
 
   // Handle drag-down to close inspector sheet
   let hTouchY=null;
