@@ -2043,6 +2043,13 @@ function renderBoundaries(){
 }
 
 function clearTempLine(){document.getElementById('g-temp').innerHTML='';}
+// Highlight the chosen source node while drawing an edge (esp. for touch, where there's no hover line)
+function showConnectSource(id){
+  const n=nodeAt(id); if(!n)return;
+  document.getElementById('g-temp').innerHTML=
+    `<circle cx="${n.x}" cy="${n.y}" r="${R+10}" fill="none" stroke="var(--offense)" stroke-width="3" stroke-dasharray="6 6" opacity=".9">
+       <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="0.6s" repeatCount="indefinite"/></circle>`;
+}
 
 function renderFreePathPreview(cx,cy){
   const g=document.getElementById('g-temp'); g.innerHTML='';
@@ -3168,30 +3175,31 @@ canvas.addEventListener('pointerdown',e=>{
     return;
   }
 
-  // --- placement of armed tool ---
+  // --- placement / drawing with an armed tool ---
   if(armed){
     const c=COMPONENTS[armed];
-    if(c.blueteam){
-      if(nodeEl){ applyControl(nodeEl.dataset.id, armed); }
-      else { addNode(armed,w.x,w.y); }
-      if(!e.shiftKey)disarm(); return;
-    }
-    if(c.kind==='node'){ addNode(armed,w.x,w.y); if(!e.shiftKey)disarm(); return; }
-    if(c.kind==='boundary'){ addBoundary(c.bnd,w.x,w.y); if(!e.shiftKey)disarm(); return; }
+    // Freehand: each tap drops a vertex (double-tap/click closes) — keep immediate
     if(c.kind==='freehand'){
       if(!freePath){ freePath={points:[]}; }
       freePath.points.push([w.x,w.y]);
       renderFreePathPreview(w.x,w.y);
       return;
     }
+    // Edges/tunnels: tap a node to connect; drag or tap empty space pans to reach far nodes
     if(c.kind==='edge'||c.kind==='attack'||c.kind==='tunnel_off'||c.kind==='tunnel_def'){
       if(nodeEl){
         const id=nodeEl.dataset.id;
-        if(!connectFrom){connectFrom=id; showHint('Now click the <b>target</b> node.'); }
-        else{ addEdge(connectFrom,id,c.kind==='attack'||c.kind==='tunnel_off',c.kind==='tunnel_off'||c.kind==='tunnel_def'); connectFrom=null; showHint('Click next <b>source</b> node — or press <b>Esc</b> to stop.'); }
+        if(!connectFrom){ connectFrom=id; showConnectSource(id); showHint('Now tap the <b>target</b> node. Drag the background to scroll.'); }
+        else if(id!==connectFrom){ addEdge(connectFrom,id,c.kind==='attack'||c.kind==='tunnel_off',c.kind==='tunnel_off'||c.kind==='tunnel_def'); connectFrom=null; clearTempLine(); showHint('Tap next <b>source</b> node — or press <b>Esc</b> to stop.'); }
+        canvas.setPointerCapture(e.pointerId); return;
       }
-      return;
+      // empty space → pan (so you can scroll to an off-screen target node)
+      drag={mode:'pan',sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,moved:false};
+      canvas.classList.add('panning'); canvas.setPointerCapture(e.pointerId); return;
     }
+    // Node / Boundary / Blue-team control: defer to release — a tap places, a drag pans
+    drag={mode:'armed', armed, c, downW:w, sx:e.clientX, sy:e.clientY, vx:view.x, vy:view.y, moved:false, nodeId: nodeEl?nodeEl.dataset.id:null};
+    canvas.setPointerCapture(e.pointerId); return;
   }
 
   // --- resize boundary ---
@@ -3275,6 +3283,11 @@ canvas.addEventListener('pointermove',e=>{
     renderBoundaries(); renderNodes(); renderEdges(); applyPiiZones();
   }
   else if(drag.mode==='resize'){drag.b.w=Math.max(80,snap(w.x-drag.b.x)); drag.b.h=Math.max(60,snap(w.y-drag.b.y)); renderBoundaries(); applyPiiZones();}
+  else if(drag.mode==='armed'){
+    // armed tool: once the pointer moves enough it becomes a pan, otherwise it's a tap-to-place
+    if(!drag.moved && Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>10){ drag.moved=true; canvas.classList.add('panning'); }
+    if(drag.moved){ view.x=drag.vx+(e.clientX-drag.sx); view.y=drag.vy+(e.clientY-drag.sy); applyView(); }
+  }
   else if(drag.mode==='pan'){view.x=drag.vx+(e.clientX-drag.sx); view.y=drag.vy+(e.clientY-drag.sy); drag.moved=true; applyView();}
 });
 
@@ -3288,6 +3301,18 @@ canvas.addEventListener('pointerup',e=>{
   }
   if(pinchState){try{canvas.releasePointerCapture(e.pointerId);}catch(_){} return;}
   if(drag){
+    // armed tool released: a tap (no pan) places / attaches; a drag was just a pan
+    if(drag.mode==='armed'){
+      if(!drag.moved){
+        const c=drag.c, w=drag.downW;
+        if(c.blueteam){ if(drag.nodeId){applyControl(drag.nodeId,drag.armed);} else {addNode(drag.armed,w.x,w.y);} }
+        else if(c.kind==='node'){ addNode(drag.armed,w.x,w.y); }
+        else if(c.kind==='boundary'){ addBoundary(c.bnd,w.x,w.y); }
+        if(!e.shiftKey)disarm();
+      }
+      canvas.classList.remove('panning'); try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
+      drag=null; return;
+    }
     // If boundary was clicked without dragging → enter move-grab mode (mouse only; touch just selects)
     if(drag.mode==='boundary'&&!drag.started&&!drag.b.points&&!drag.touch){
       const w=screenToWorld(e.clientX,e.clientY);
